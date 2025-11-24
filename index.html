@@ -35,7 +35,6 @@
             overflow: hidden;
         }
 
-        /* Animated Background */
         .container::before {
             content: '';
             position: absolute;
@@ -67,6 +66,7 @@
             background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
             background-size: 300% 100%;
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: gradientShift 3s ease infinite;
             z-index: 10;
@@ -216,17 +216,17 @@
             background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
             color: #333;
             border: none;
-            padding: 12px 0;
-            font-size: clamp(14px, 3.5vw, 18px);
+            padding: 18px 0;
+            font-size: clamp(16px, 4vw, 22px);
             font-weight: 700;
             cursor: pointer;
-            border-radius: 10px;
+            border-radius: 12px;
             user-select: none;
             transition: all 0.2s;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            min-width: 30px;
+            min-width: 35px;
             flex: 1;
-            max-width: 45px;
+            max-width: 55px;
         }
 
         .key-button:active {
@@ -251,12 +251,65 @@
             padding: 20px;
         }
 
+        #menuTitle {
+            font-size: clamp(28px, 7vw, 42px);
+            font-weight: 900;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
         #menuScreen h2 {
             color: white;
             font-size: clamp(20px, 5vw, 28px);
             margin-bottom: 20px;
             text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             font-weight: 800;
+        }
+
+        #countdownOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        #countdownNumber {
+            font-size: clamp(80px, 20vw, 150px);
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+            animation: countdownPulse 1s ease-in-out;
+        }
+
+        @keyframes countdownPulse {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         #levelButtonsContainer {
@@ -306,7 +359,6 @@
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
         }
 
-        /* Responsive adjustments */
         @media (max-width: 400px) {
             #levelButtonsContainer {
                 grid-template-columns: repeat(5, 1fr);
@@ -364,15 +416,17 @@
         <div id="virtualKeyboard" style="display: none;"></div>
 
         <div id="menuScreen">
+            <div id="menuTitle">📝 Word Typer Game</div>
             <h2>🎮 เลือกเลเวล (1-10)</h2>
             <div id="levelButtonsContainer"></div>
+        </div>
+
+        <div id="countdownOverlay">
+            <div id="countdownNumber">3</div>
         </div>
     </div>
 
     <script>
-        // --- JavaScript Game Logic ---
-
-        // 1. Setup Elements
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('scoreDisplay');
@@ -384,14 +438,17 @@
         const menuScreen = document.getElementById('menuScreen');
         const pauseBtn = document.getElementById('pauseBtn');
         const levelButtonsContainer = document.getElementById('levelButtonsContainer');
+        const countdownOverlay = document.getElementById('countdownOverlay');
+        const countdownNumber = document.getElementById('countdownNumber');
         let gameLoopId;
 
-        // Resize canvas to fit screen
         function resizeCanvas() {
-            const container = document.querySelector('.container');
             const rect = canvas.getBoundingClientRect();
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight - rect.top - (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0) - (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0);
+            if (isGameRunning) {
+                DANGER_ZONE_Y = canvas.height - 60;
+            }
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -399,7 +456,6 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // Level 1: ง่าย, 4-6 ตัวอักษร
         const LEVEL_1_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
             { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
@@ -536,6 +592,7 @@
         ];
 
         let DANGER_ZONE_Y;
+        let usedWordsInLevel = new Set();
 
         let score = 0;
         let startTime = 0;
@@ -543,7 +600,7 @@
         let fallingIcons = [];
         let timeSinceLastDrop = 0;
 
-        const INITIAL_DROP_INTERVAL = 210;
+        const INITIAL_DROP_INTERVAL = 260;
 
         let dropInterval = INITIAL_DROP_INTERVAL;
         let isGameRunning = false;
@@ -556,18 +613,16 @@
             for (let i = 0; i < 10; i++) {
                 const button = document.createElement('button');
                 button.className = 'level-button';
-                const wordCount = ALL_LEVEL_WORDS[i] ? ALL_LEVEL_WORDS[i].length : 0;
                 button.textContent = `L${i + 1}`;
-
                 button.onclick = () => startGame(i);
-
                 levelButtonsContainer.appendChild(button);
             }
         }
 
-        function startGame(levelIndex) {
+        async function startGame(levelIndex) {
             currentLevel = levelIndex;
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
+            usedWordsInLevel.clear();
 
             const speedFactor = levelIndex * 15;
             dropInterval = INITIAL_DROP_INTERVAL - speedFactor;
@@ -587,12 +642,37 @@
             virtualKeyboard.style.display = 'flex';
 
             resizeCanvas();
-            DANGER_ZONE_Y = canvas.height - 100;
+            DANGER_ZONE_Y = canvas.height - 60;
+
+            await showCountdown();
 
             isGameRunning = true;
             if (!gameLoopId) {
                 gameLoop();
             }
+        }
+
+        function showCountdown() {
+            return new Promise((resolve) => {
+                countdownOverlay.style.display = 'flex';
+                let count = 3;
+                countdownNumber.textContent = count;
+
+                const countInterval = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        countdownNumber.textContent = count;
+                        countdownNumber.style.animation = 'none';
+                        setTimeout(() => {
+                            countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
+                        }, 10);
+                    } else {
+                        clearInterval(countInterval);
+                        countdownOverlay.style.display = 'none';
+                        resolve();
+                    }
+                }, 1000);
+            });
         }
 
         function returnToMenu() {
@@ -615,8 +695,17 @@
         }
 
         function createWordIcon() {
-            const wordData = levelWords[Math.floor(Math.random() * levelWords.length)];
-            const baseSpeed = 1.5 + (currentLevel * 0.15);
+            let availableWords = levelWords.filter(w => !usedWordsInLevel.has(w.word));
+
+            if (availableWords.length === 0) {
+                usedWordsInLevel.clear();
+                availableWords = levelWords;
+            }
+
+            const wordData = availableWords[Math.floor(Math.random() * availableWords.length)];
+            usedWordsInLevel.add(wordData.word);
+
+            const baseSpeed = 1.0 + (currentLevel * 0.12);
 
             return {
                 x: Math.random() * (canvas.width - 60) + 30,
