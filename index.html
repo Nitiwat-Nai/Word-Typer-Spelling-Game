@@ -3,23 +3,39 @@
 <head>
     <title>Word Typer: English Spelling Game</title>
     <style>
-        /* CSS หลัก: ควบคุมขนาด Responsive ตามที่กำหนด */
+        /* ----------------------------------------------------------------- */
+        /* --- CSS หลัก: ปรับ BODY และเพิ่ม CONTAINER เพื่อจัดการ Responsive --- */
+        /* ----------------------------------------------------------------- */
         body {
-            margin: 0 auto;
+            margin: 0;
             overflow-x: hidden;
             background-color: #f0f8ff; /* สีฟ้าอ่อน */
             font-family: 'Arial', sans-serif;
+            
+            /* ตั้งค่าให้ body จัดกึ่งกลาง container */
+            display: flex;
+            justify-content: center; /* จัดกึ่งกลางแนวนอน */
+            align-items: flex-start; /* จัดชิดขอบบน */
+            min-height: 100vh; /* ให้พื้นหลัง body สูงเต็มจอ */
+        }
+
+        .container {
+            /* นี่คือส่วนที่จำกัดขนาดตามที่ต้องการ (กว้างไม่เกิน 500px) */
+            width: 100%;
+            max-width: 500px;
+            min-height: 100vh;
+            
+            /* จัดรูปแบบภายใน Container */
+            background-color: #ffffff; /* สีพื้นหลังของกรอบเกม */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2); 
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* ความกว้างสูงสุด 500px */
-            width: 100%;
-            max-width: 500px;
-            /* ความสูงเต็มหน้าจอ */
-            min-height: 100vh;
-            /* ทำให้ UI อยู่ตรงกลางจอใหญ่ */
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2); 
+            box-sizing: border-box;
         }
+        /* ----------------------------------------------------------------- */
+        /* ----------------------------------------------------------------- */
+        
         #gameTitle {
             font-size: 32px;
             font-weight: bold;
@@ -110,7 +126,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            /* ครอบเฉพาะ body ที่มี max-width: 500px */
+            /* ครอบ container */
             width: 100%; 
             height: 100%;
             background-color: rgba(255, 255, 255, 0.95);
@@ -147,32 +163,33 @@
 </head>
 <body>
     
-    <div id="gameTitle">
-        📝 Word Typer Game
-    </div>
-
-    <div id="topBar" style="display: none;">
-        <div class="score-box">คะแนน: <span id="scoreDisplay">0</span></div>
-        <button id="pauseBtn" class="control-btn">หยุด/กลับหลัก</button>
-        <div class="time-box">เวลา: <span id="timeDisplay">0:00</span></div>
-    </div>
+    <div class="container">
     
-    <div id="inputBox" style="display: none;">
-        <span id="currentInput">รอพิมพ์...</span>
-    </div>
+        <div id="gameTitle">
+            📝 Word Typer Game
+        </div>
 
-    <canvas id="gameCanvas" width="360" height="640" style="display: none;"></canvas>
+        <div id="topBar" style="display: none;">
+            <div class="score-box">คะแนน: <span id="scoreDisplay">0</span></div>
+            <button id="pauseBtn" class="control-btn">หยุด/กลับหลัก</button>
+            <div class="time-box">เวลา: <span id="timeDisplay">0:00</span></div>
+        </div>
+        
+        <div id="inputBox" style="display: none;">
+            <span id="currentInput">รอพิมพ์...</span>
+        </div>
 
-    <div id="virtualKeyboard" style="display: none;"></div>
+        <canvas id="gameCanvas" width="360" height="640" style="display: none;"></canvas>
 
-    <div id="menuScreen">
-        <h2>เลือกเลเวล (1-10)</h2>
-        <div id="levelButtonsContainer">
-            </div>
-    </div>
+        <div id="virtualKeyboard" style="display: none;"></div>
 
-
-    <script>
+        <div id="menuScreen">
+            <h2>เลือกเลเวล (1-10)</h2>
+            <div id="levelButtonsContainer">
+                </div>
+        </div>
+        
+    </div> <script>
         // --- JavaScript Game Logic ---
 
         // 1. Setup Elements
@@ -190,10 +207,11 @@
         let gameLoopId;
 
         // ----------------------------------------------------
-        // --- 1. WORD & LEVEL DATA (10 Levels x 10 Words) ---
+        // --- 1. WORD & LEVEL DATA (10 LEVELS x 10 UNIQUE WORDS) ---
         // ----------------------------------------------------
         
-        const SAMPLE_WORDS = [
+        // Level 1: ง่าย, 4-6 ตัวอักษร
+        const LEVEL_1_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
             { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
             { icon: '🌟', word: 'STAR', meaning: 'ดาว' },
@@ -205,17 +223,142 @@
             { icon: '⚽', word: 'BALL', meaning: 'ลูกบอล' },
             { icon: '✏️', word: 'PEN', meaning: 'ปากกา' },
         ];
+        
+        // Level 2: 5-7 ตัวอักษร
+        const LEVEL_2_WORDS = [
+            { icon: '🐘', word: 'ELEPHANT', meaning: 'ช้าง' },
+            { icon: '🐒', word: 'MONKEY', meaning: 'ลิง' },
+            { icon: '👑', word: 'CROWN', meaning: 'มงกุฎ' },
+            { icon: '🎸', word: 'GUITAR', meaning: 'กีตาร์' },
+            { icon: '🌊', word: 'OCEAN', meaning: 'มหาสมุทร' },
+            { icon: '🚀', word: 'ROCKET', meaning: 'จรวด' },
+            { icon: '🏔️', word: 'MOUNTAIN', meaning: 'ภูเขา' },
+            { icon: '🕰️', word: 'CLOCK', meaning: 'นาฬิกา' },
+            { icon: '🍪', word: 'COOKIE', meaning: 'คุกกี้' },
+            { icon: '☂️', word: 'UMBRELLA', meaning: 'ร่ม' },
+        ];
 
-        // สร้าง 10 เลเวลจาก SAMPLE_WORDS
-        const ALL_LEVEL_WORDS = [];
-        for (let i = 0; i < 10; i++) {
-            ALL_LEVEL_WORDS.push([...SAMPLE_WORDS].sort(() => Math.random() - 0.5));
-        }
+        // Level 3: 5-8 ตัวอักษร
+        const LEVEL_3_WORDS = [
+            { icon: '🚁', word: 'HELICOPTER', meaning: 'เฮลิคอปเตอร์' },
+            { icon: '🌈', word: 'RAINBOW', meaning: 'รุ้ง' },
+            { icon: '🔑', word: 'KEYBOARD', meaning: 'แป้นพิมพ์' },
+            { icon: '🥕', word: 'CARROT', meaning: 'แครอท' },
+            { icon: '🚪', word: 'DOOR', meaning: 'ประตู' },
+            { icon: '💡', word: 'BULB', meaning: 'หลอดไฟ' },
+            { icon: '📞', word: 'PHONE', meaning: 'โทรศัพท์' },
+            { icon: '🪙', word: 'MONEY', meaning: 'เงิน' },
+            { icon: '🦢', word: 'SWAN', meaning: 'หงส์' },
+            { icon: '🛵', word: 'SCOOTER', meaning: 'สกู๊ตเตอร์' },
+        ];
+        
+        // Level 4: 6-9 ตัวอักษร
+        const LEVEL_4_WORDS = [
+            { icon: '🏰', word: 'CASTLE', meaning: 'ปราสาท' },
+            { icon: '💎', word: 'DIAMOND', meaning: 'เพชร' },
+            { icon: '🎹', word: 'PIANO', meaning: 'เปียโน' },
+            { icon: '🖼️', word: 'PICTURE', meaning: 'รูปภาพ' },
+            { icon: '🥇', word: 'MEDAL', meaning: 'เหรียญ' },
+            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
+            { icon: '🧊', word: 'ICE', meaning: 'น้ำแข็ง' },
+            { icon: '🧅', word: 'ONION', meaning: 'หัวหอม' },
+            { icon: '🐙', word: 'OCTOPUS', meaning: 'ปลาหมึกยักษ์' },
+            { icon: '🧩', word: 'PUZZLE', meaning: 'ปริศนา' },
+        ];
+
+        // Level 5: 6-10 ตัวอักษร
+        const LEVEL_5_WORDS = [
+            { icon: '⛵', word: 'SAILBOAT', meaning: 'เรือใบ' },
+            { icon: '🗿', word: 'STATUE', meaning: 'รูปปั้น' },
+            { icon: '🛎️', word: 'BELL', meaning: 'กระดิ่ง' },
+            { icon: '🧱', word: 'BRICK', meaning: 'อิฐ' },
+            { icon: '💻', word: 'COMPUTER', meaning: 'คอมพิวเตอร์' },
+            { icon: '🔦', word: 'FLASHLIGHT', meaning: 'ไฟฉาย' },
+            { icon: '🧲', word: 'MAGNET', meaning: 'แม่เหล็ก' },
+            { icon: '📌', word: 'PIN', meaning: 'หมุด' },
+            { icon: '🪑', word: 'CHAIR', meaning: 'เก้าอี้' },
+            { icon: '🪜', word: 'LADDER', meaning: 'บันได' },
+        ];
+
+        // Level 6: 7-11 ตัวอักษร
+        const LEVEL_6_WORDS = [
+            { icon: '🐧', word: 'PENGUIN', meaning: 'นกเพนกวิน' },
+            { icon: '🦒', word: 'GIRAFFE', meaning: 'ยีราฟ' },
+            { icon: '🦕', word: 'DINOSAUR', meaning: 'ไดโนเสาร์' },
+            { icon: '🪡', word: 'NEEDLE', meaning: 'เข็ม' },
+            { icon: '🪖', word: 'HELMET', meaning: 'หมวกกันน็อก' },
+            { icon: '🪦', word: 'GRAVE', meaning: 'หลุมฝังศพ' },
+            { icon: '🪣', word: 'BUCKET', meaning: 'ถัง' },
+            { icon: '🪤', word: 'TRAP', meaning: 'กับดัก' },
+            { icon: '🪠', word: 'PLUNGER', meaning: 'ลูกยางดูดส้วม' },
+            { icon: '🪗', word: 'ACCORDION', meaning: 'หีบเพลง' },
+        ];
+
+        // Level 7: 8-12 ตัวอักษร
+        const LEVEL_7_WORDS = [
+            { icon: '🛸', word: 'UFO', meaning: 'ยูเอฟโอ' },
+            { icon: '🛰️', word: 'SATELLITE', meaning: 'ดาวเทียม' },
+            { icon: '🔭', word: 'TELESCOPE', meaning: 'กล้องโทรทรรศน์' },
+            { icon: '🧬', word: 'DNA', meaning: 'ดีเอ็นเอ' },
+            { icon: '🔬', word: 'MICROSCOPE', meaning: 'กล้องจุลทรรศน์' },
+            { icon: '🧪', word: 'TESTTUBE', meaning: 'หลอดทดลอง' },
+            { icon: '🧫', word: 'PETRIDISH', meaning: 'จานเพาะเชื้อ' },
+            { icon: '🦠', word: 'GERM', meaning: 'เชื้อโรค' },
+            { icon: '⚗️', word: 'ALCHEMY', meaning: 'เล่นแร่แปรธาตุ' },
+            { icon: '🧲', word: 'MAGNETISM', meaning: 'แม่เหล็กไฟฟ้า' },
+        ];
+
+        // Level 8: 9-13 ตัวอักษร
+        const LEVEL_8_WORDS = [
+            { icon: '🗳️', word: 'VOTE', meaning: 'โหวต' },
+            { icon: '🛍️', word: 'SHOPPING', meaning: 'ช้อปปิ้ง' },
+            { icon: '🕰️', word: 'TIMEPIECE', meaning: 'นาฬิกา' },
+            { icon: '🛒', word: 'CART', meaning: 'ตะกร้า' },
+            { icon: '💸', word: 'PAYMENT', meaning: 'การชำระเงิน' },
+            { icon: '✉️', word: 'ENVELOPE', meaning: 'ซองจดหมาย' },
+            { icon: '📮', word: 'POSTBOX', meaning: 'ตู้ไปรษณีย์' },
+            { icon: '📰', word: 'NEWSPAPER', meaning: 'หนังสือพิมพ์' },
+            { icon: '🔖', word: 'BOOKMARK', meaning: 'ที่คั่นหนังสือ' },
+            { icon: '📐', word: 'RULER', meaning: 'ไม้บรรทัด' },
+        ];
+
+        // Level 9: 10-14 ตัวอักษร
+        const LEVEL_9_WORDS = [
+            { icon: '🗺️', word: 'MAP', meaning: 'แผนที่' },
+            { icon: '🧭', word: 'COMPASS', meaning: 'เข็มทิศ' },
+            { icon: '🏔️', word: 'LANDSCAPE', meaning: 'ภูมิประเทศ' },
+            { icon: '🏟️', word: 'STADIUM', meaning: 'สนามกีฬา' },
+            { icon: '🏛️', word: 'TEMPLE', meaning: 'วัด/วิหาร' },
+            { icon: '🏗️', word: 'CONSTRUCTION', meaning: 'การก่อสร้าง' },
+            { icon: '🏭', word: 'FACTORY', meaning: 'โรงงาน' },
+            { icon: '🏢', word: 'OFFICE', meaning: 'สำนักงาน' },
+            { icon: '🏬', word: 'DEPARTMENT', meaning: 'ห้างสรรพสินค้า' },
+            { icon: '🛣️', word: 'HIGHWAY', meaning: 'ทางด่วน' },
+        ];
+
+        // Level 10: คำสั้น ไม่เกิน 5 ตัวอักษร (ง่าย, แต่ความเร็วเกมสูงสุด)
+        const LEVEL_10_WORDS = [
+            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
+            { icon: '🐻', word: 'BEAR', meaning: 'หมี' },
+            { icon: '🦋', word: 'FLY', meaning: 'แมลงวัน' },
+            { icon: '🐭', word: 'MICE', meaning: 'หนู' },
+            { icon: '🐝', word: 'BEE', meaning: 'ผึ้ง' },
+            { icon: '🐸', word: 'FROG', meaning: 'กบ' },
+            { icon: '🐠', word: 'FISH', meaning: 'ปลา' },
+            { icon: '🐚', word: 'SHELL', meaning: 'เปลือกหอย' },
+            { icon: '💧', word: 'DROP', meaning: 'หยดน้ำ' },
+            { icon: '🔥', word: 'FIRE', meaning: 'ไฟ' },
+        ];
+
+        const ALL_LEVEL_WORDS = [
+            LEVEL_1_WORDS, LEVEL_2_WORDS, LEVEL_3_WORDS, LEVEL_4_WORDS, LEVEL_5_WORDS,
+            LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
+        ];
         
         const DANGER_ZONE_Y = canvas.height - 100; 
 
         // ----------------------------------------------------
-        // --- 2. GAME STATE ---
+        // --- 2. GAME STATE & CONSTANTS ---
         // ----------------------------------------------------
 
         let score = 0;
@@ -223,7 +366,11 @@
         let runningTime = 0;
         let fallingIcons = [];
         let timeSinceLastDrop = 0;
-        let dropInterval = 180; 
+        
+        // **[แก้ไข]: ปรับความเร็วเริ่มต้นช้าลง (เพิ่มจาก 180 เป็น 210 frames)**
+        const INITIAL_DROP_INTERVAL = 210; // 3.5 วินาที (210/60 FPS)
+        
+        let dropInterval = INITIAL_DROP_INTERVAL; 
         let isGameRunning = false;
         let currentLevel = 0; 
         let levelWords = []; 
@@ -240,7 +387,7 @@
                 const button = document.createElement('button');
                 button.className = 'level-button';
                 const wordCount = ALL_LEVEL_WORDS[i] ? ALL_LEVEL_WORDS[i].length : 0; 
-                button.textContent = `L ${i + 1} (${wordCount})`; // ย่อข้อความให้เหมาะกับ 5 คอลัมน์
+                button.textContent = `L ${i + 1} (${wordCount})`;
                 
                 button.onclick = () => startGame(i);
                 
@@ -250,11 +397,13 @@
         
         function startGame(levelIndex) {
             currentLevel = levelIndex;
-            levelWords = ALL_LEVEL_WORDS[levelIndex];
+            // Shuffle words for the current level
+            levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
             
-            // ปรับความเร็วตามเลเวล (ยิ่งสูงยิ่งเร็ว)
-            dropInterval = 180 - (levelIndex * 10); 
-            if (dropInterval < 60) dropInterval = 60; 
+            // ปรับความเร็วตามเลเวล: Level 10 (index 9) เร็วที่สุด
+            const speedFactor = levelIndex * 15; // เพิ่มความเร็ว 15 frame ต่อเลเวล
+            dropInterval = INITIAL_DROP_INTERVAL - speedFactor; 
+            if (dropInterval < 30) dropInterval = 30; // จำกัดความเร็วสูงสุด (0.5 วินาที)
 
             // Reset State
             score = 0;
@@ -269,7 +418,7 @@
             canvas.style.display = 'block';
             topBar.style.display = 'flex';
             inputBox.style.display = 'block';
-            virtualKeyboard.style.display = 'flex'; // เปลี่ยนจาก grid เป็น flex เพื่อจัดแถว
+            virtualKeyboard.style.display = 'flex'; 
             
             isGameRunning = true;
             if (!gameLoopId) {
@@ -308,18 +457,24 @@
         // ----------------------------------------------------
 
         function createWordIcon() {
+            // เลือกคำศัพท์แบบสุ่มจาก levelWords
             const wordData = levelWords[Math.floor(Math.random() * levelWords.length)];
+            
+            // ความเร็วเริ่มต้น (Base speed) จะเพิ่มขึ้นตามเลเวล 
+            // Level 10 จะมี Base Speed สูงสุด แต่ Drop Interval (ความถี่) ช้าลง
+            const baseSpeed = 1.5 + (currentLevel * 0.15);
+            
             return {
                 x: Math.random() * (canvas.width - 60) + 30,
                 y: -50,
                 icon: wordData.icon,
                 targetWord: wordData.word.toUpperCase(),
                 remainingLetters: wordData.word.toUpperCase(), 
-                speed: 1.5 + (currentLevel * 0.15), 
+                speed: baseSpeed, 
                 isDestroying: false,
                 destroyScale: 1,
                 iconSize: 40,
-                baseSpeed: 1.5 + (currentLevel * 0.15)
+                baseSpeed: baseSpeed
             };
         }
 
@@ -334,10 +489,13 @@
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
 
-            // Icon Dropping Logic
+            // Icon Dropping Logic (ความถี่ในการเกิดไอคอน)
             timeSinceLastDrop++;
             if (timeSinceLastDrop >= dropInterval) {
-                fallingIcons.push(createWordIcon());
+                // Ensure word list is not empty
+                if (levelWords.length > 0) {
+                    fallingIcons.push(createWordIcon());
+                }
                 timeSinceLastDrop = 0;
             }
 
