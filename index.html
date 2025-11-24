@@ -1,170 +1,350 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
+
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Word Typer: English Spelling Game</title>
     <style>
-        /* ----------------------------------------------------------------- */
-        /* --- CSS หลัก: ปรับ BODY และเพิ่ม CONTAINER เพื่อจัดการ Responsive --- */
-        /* ----------------------------------------------------------------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             margin: 0;
-            overflow-x: hidden;
-            background-color: #f0f8ff; /* สีฟ้าอ่อน */
-            font-family: 'Arial', sans-serif;
-            
-            /* ตั้งค่าให้ body จัดกึ่งกลาง container */
-            display: flex;
-            justify-content: center; /* จัดกึ่งกลางแนวนอน */
-            align-items: flex-start; /* จัดชิดขอบบน */
-            min-height: 100vh; /* ให้พื้นหลัง body สูงเต็มจอ */
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            touch-action: none;
         }
 
         .container {
-            /* นี่คือส่วนที่จำกัดขนาดตามที่ต้องการ (กว้างไม่เกิน 500px) */
-            width: 100%;
-            max-width: 500px;
-            min-height: 100vh;
-            
-            /* จัดรูปแบบภายใน Container */
-            background-color: #ffffff; /* สีพื้นหลังของกรอบเกม */
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2); 
+            width: 100vw;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
         }
-        /* ----------------------------------------------------------------- */
-        /* ----------------------------------------------------------------- */
-        
+
+        /* Animated Background */
+        .container::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: backgroundMove 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes backgroundMove {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+
         #gameTitle {
-            font-size: 32px;
-            font-weight: bold;
-            color: #3f51b5; 
-            margin: 10px 0;
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: 800;
+            color: #ffffff;
             text-align: center;
+            padding: 15px 10px;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+            z-index: 10;
         }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
         #topBar {
             width: 100%;
             display: flex;
             justify-content: space-between;
-            padding: 10px 10px;
-            box-sizing: border-box;
+            align-items: center;
+            padding: 10px 15px;
+            gap: 10px;
+            z-index: 10;
         }
-        .score-box, .time-box, .control-btn {
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.2s;
-        }
-        .score-box { background-color: #00bcd4; color: white; }
-        .time-box { background-color: #ff9800; color: white; }
-        .control-btn { background-color: #9c27b0; color: white; border: none; }
-        .control-btn:hover { background-color: #7b1fa2; }
 
-        #gameCanvas {
-            border: 5px solid #3f51b5; 
-            background-color: #fffacd; /* พื้นหลังเกมสีเหลืองอ่อน */
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-            margin-bottom: 10px;
+        .score-box,
+        .time-box,
+        .control-btn {
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-weight: 700;
+            font-size: clamp(12px, 3.5vw, 16px);
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border: none;
+            white-space: nowrap;
         }
-        #inputBox {
-            width: 95%;
-            margin-bottom: 10px;
+
+        .score-box {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white;
+            flex: 1;
             text-align: center;
         }
-        #currentInput {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            letter-spacing: 5px;
-        }
-        .typed-error {
-            color: #f44336; 
-            animation: flash 0.2s 3;
-        }
-        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
 
-        /* Keyboard Styles */
+        .time-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            flex: 1;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+            font-weight: 800;
+            flex: 1.2;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #gameCanvas {
+            flex: 1;
+            width: 100%;
+            background: linear-gradient(180deg, #ffecd2 0%, #fcb69f 100%);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.1);
+            margin: 0;
+            display: block;
+        }
+
+        #inputBox {
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        #currentInput {
+            font-size: clamp(20px, 5vw, 32px);
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            display: inline-block;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .typed-error {
+            color: #ff4757;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-10px);
+            }
+
+            75% {
+                transform: translateX(10px);
+            }
+        }
+
         #virtualKeyboard {
-            width: 98%;
-            padding: 5px;
-            background-color: #f0f0f0;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
             display: flex;
             flex-direction: column;
-            gap: 5px;
-        }
-        .keyboard-row {
-            display: grid;
-            gap: 5px;
-            /* ใช้ column count เพื่อจัด QWERTY ให้ลงตัว */
-            grid-template-columns: repeat(auto-fit, minmax(25px, 1fr)); 
-        }
-        .key-button {
-            background-color: #ffffff;
-            color: #3f51b5;
-            border: 2px solid #3f51b5;
-            padding: 10px 0;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-            user-select: none;
-            transition: background-color 0.1s, transform 0.1s;
-        }
-        .key-button:active {
-            background-color: #bbdefb; 
-            transform: scale(0.95);
+            gap: 8px;
+            z-index: 10;
         }
 
-        /* Menu Screen Styles */
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .key-button {
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            color: #333;
+            border: none;
+            padding: 12px 0;
+            font-size: clamp(14px, 3.5vw, 18px);
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 10px;
+            user-select: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            min-width: 30px;
+            flex: 1;
+            max-width: 45px;
+        }
+
+        .key-button:active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(0.9);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
         #menuScreen {
             position: absolute;
             top: 0;
             left: 0;
-            /* ครอบ container */
-            width: 100%; 
+            width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 100;
+            padding: 20px;
         }
+
+        #menuScreen h2 {
+            color: white;
+            font-size: clamp(20px, 5vw, 28px);
+            margin-bottom: 20px;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            font-weight: 800;
+        }
+
         #levelButtonsContainer {
             display: grid;
-            /* 5 คอลัมน์ */
-            grid-template-columns: repeat(5, 1fr); 
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
             padding: 10px;
+            max-width: 600px;
+            width: 100%;
         }
+
         .level-button {
-            padding: 10px 5px;
-            margin: 0;
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #4caf50; 
+            padding: 15px 10px;
+            font-size: clamp(12px, 3vw, 16px);
+            font-weight: 800;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 15px;
             cursor: pointer;
-            box-shadow: 0 4px #388e3c;
-            transition: background-color 0.2s;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
         }
-        .level-button:hover {
-            background-color: #388e3c;
+
+        .level-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .level-button:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .level-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 400px) {
+            #levelButtonsContainer {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 8px;
+            }
+
+            .level-button {
+                padding: 12px 8px;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            #gameTitle {
+                padding: 8px 10px;
+            }
+
+            #topBar {
+                padding: 5px 15px;
+            }
+
+            #inputBox {
+                padding: 8px;
+            }
+
+            #virtualKeyboard {
+                padding: 5px;
+                gap: 4px;
+            }
+
+            .key-button {
+                padding: 8px 0;
+            }
         }
     </style>
 </head>
+
 <body>
-    
     <div class="container">
-    
         <div id="gameTitle">
             📝 Word Typer Game
         </div>
@@ -174,22 +354,22 @@
             <button id="pauseBtn" class="control-btn">หยุด/กลับหลัก</button>
             <div class="time-box">เวลา: <span id="timeDisplay">0:00</span></div>
         </div>
-        
+
         <div id="inputBox" style="display: none;">
             <span id="currentInput">รอพิมพ์...</span>
         </div>
 
-        <canvas id="gameCanvas" width="360" height="640" style="display: none;"></canvas>
+        <canvas id="gameCanvas" style="display: none;"></canvas>
 
         <div id="virtualKeyboard" style="display: none;"></div>
 
         <div id="menuScreen">
-            <h2>เลือกเลเวล (1-10)</h2>
-            <div id="levelButtonsContainer">
-                </div>
+            <h2>🎮 เลือกเลเวล (1-10)</h2>
+            <div id="levelButtonsContainer"></div>
         </div>
-        
-    </div> <script>
+    </div>
+
+    <script>
         // --- JavaScript Game Logic ---
 
         // 1. Setup Elements
@@ -206,10 +386,19 @@
         const levelButtonsContainer = document.getElementById('levelButtonsContainer');
         let gameLoopId;
 
-        // ----------------------------------------------------
-        // --- 1. WORD & LEVEL DATA (10 LEVELS x 10 UNIQUE WORDS) ---
-        // ----------------------------------------------------
-        
+        // Resize canvas to fit screen
+        function resizeCanvas() {
+            const container = document.querySelector('.container');
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - rect.top - (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0) - (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(resizeCanvas, 100);
+        });
+
         // Level 1: ง่าย, 4-6 ตัวอักษร
         const LEVEL_1_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
@@ -223,8 +412,7 @@
             { icon: '⚽', word: 'BALL', meaning: 'ลูกบอล' },
             { icon: '✏️', word: 'PEN', meaning: 'ปากกา' },
         ];
-        
-        // Level 2: 5-7 ตัวอักษร
+
         const LEVEL_2_WORDS = [
             { icon: '🐘', word: 'ELEPHANT', meaning: 'ช้าง' },
             { icon: '🐒', word: 'MONKEY', meaning: 'ลิง' },
@@ -238,7 +426,6 @@
             { icon: '☂️', word: 'UMBRELLA', meaning: 'ร่ม' },
         ];
 
-        // Level 3: 5-8 ตัวอักษร
         const LEVEL_3_WORDS = [
             { icon: '🚁', word: 'HELICOPTER', meaning: 'เฮลิคอปเตอร์' },
             { icon: '🌈', word: 'RAINBOW', meaning: 'รุ้ง' },
@@ -251,8 +438,7 @@
             { icon: '🦢', word: 'SWAN', meaning: 'หงส์' },
             { icon: '🛵', word: 'SCOOTER', meaning: 'สกู๊ตเตอร์' },
         ];
-        
-        // Level 4: 6-9 ตัวอักษร
+
         const LEVEL_4_WORDS = [
             { icon: '🏰', word: 'CASTLE', meaning: 'ปราสาท' },
             { icon: '💎', word: 'DIAMOND', meaning: 'เพชร' },
@@ -266,7 +452,6 @@
             { icon: '🧩', word: 'PUZZLE', meaning: 'ปริศนา' },
         ];
 
-        // Level 5: 6-10 ตัวอักษร
         const LEVEL_5_WORDS = [
             { icon: '⛵', word: 'SAILBOAT', meaning: 'เรือใบ' },
             { icon: '🗿', word: 'STATUE', meaning: 'รูปปั้น' },
@@ -280,7 +465,6 @@
             { icon: '🪜', word: 'LADDER', meaning: 'บันได' },
         ];
 
-        // Level 6: 7-11 ตัวอักษร
         const LEVEL_6_WORDS = [
             { icon: '🐧', word: 'PENGUIN', meaning: 'นกเพนกวิน' },
             { icon: '🦒', word: 'GIRAFFE', meaning: 'ยีราฟ' },
@@ -294,7 +478,6 @@
             { icon: '🪗', word: 'ACCORDION', meaning: 'หีบเพลง' },
         ];
 
-        // Level 7: 8-12 ตัวอักษร
         const LEVEL_7_WORDS = [
             { icon: '🛸', word: 'UFO', meaning: 'ยูเอฟโอ' },
             { icon: '🛰️', word: 'SATELLITE', meaning: 'ดาวเทียม' },
@@ -308,7 +491,6 @@
             { icon: '🧲', word: 'MAGNETISM', meaning: 'แม่เหล็กไฟฟ้า' },
         ];
 
-        // Level 8: 9-13 ตัวอักษร
         const LEVEL_8_WORDS = [
             { icon: '🗳️', word: 'VOTE', meaning: 'โหวต' },
             { icon: '🛍️', word: 'SHOPPING', meaning: 'ช้อปปิ้ง' },
@@ -322,7 +504,6 @@
             { icon: '📐', word: 'RULER', meaning: 'ไม้บรรทัด' },
         ];
 
-        // Level 9: 10-14 ตัวอักษร
         const LEVEL_9_WORDS = [
             { icon: '🗺️', word: 'MAP', meaning: 'แผนที่' },
             { icon: '🧭', word: 'COMPASS', meaning: 'เข็มทิศ' },
@@ -336,7 +517,6 @@
             { icon: '🛣️', word: 'HIGHWAY', meaning: 'ทางด่วน' },
         ];
 
-        // Level 10: คำสั้น ไม่เกิน 5 ตัวอักษร (ง่าย, แต่ความเร็วเกมสูงสุด)
         const LEVEL_10_WORDS = [
             { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
             { icon: '🐻', word: 'BEAR', meaning: 'หมี' },
@@ -354,83 +534,71 @@
             LEVEL_1_WORDS, LEVEL_2_WORDS, LEVEL_3_WORDS, LEVEL_4_WORDS, LEVEL_5_WORDS,
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
-        
-        const DANGER_ZONE_Y = canvas.height - 100; 
 
-        // ----------------------------------------------------
-        // --- 2. GAME STATE & CONSTANTS ---
-        // ----------------------------------------------------
+        let DANGER_ZONE_Y;
 
         let score = 0;
         let startTime = 0;
         let runningTime = 0;
         let fallingIcons = [];
         let timeSinceLastDrop = 0;
-        
-        // **[แก้ไข]: ปรับความเร็วเริ่มต้นช้าลง (เพิ่มจาก 180 เป็น 210 frames)**
-        const INITIAL_DROP_INTERVAL = 210; // 3.5 วินาที (210/60 FPS)
-        
-        let dropInterval = INITIAL_DROP_INTERVAL; 
-        let isGameRunning = false;
-        let currentLevel = 0; 
-        let levelWords = []; 
 
-        // ----------------------------------------------------
-        // --- 3. CORE FUNCTIONS (Initialization & Flow) ---
-        // ----------------------------------------------------
+        const INITIAL_DROP_INTERVAL = 210;
+
+        let dropInterval = INITIAL_DROP_INTERVAL;
+        let isGameRunning = false;
+        let currentLevel = 0;
+        let levelWords = [];
 
         function generateLevels() {
-            levelButtonsContainer.innerHTML = ''; // Clear previous buttons
-            
-            // สร้างปุ่มเลเวล 1-10
+            levelButtonsContainer.innerHTML = '';
+
             for (let i = 0; i < 10; i++) {
                 const button = document.createElement('button');
                 button.className = 'level-button';
-                const wordCount = ALL_LEVEL_WORDS[i] ? ALL_LEVEL_WORDS[i].length : 0; 
-                button.textContent = `L ${i + 1} (${wordCount})`;
-                
+                const wordCount = ALL_LEVEL_WORDS[i] ? ALL_LEVEL_WORDS[i].length : 0;
+                button.textContent = `L${i + 1}`;
+
                 button.onclick = () => startGame(i);
-                
+
                 levelButtonsContainer.appendChild(button);
             }
         }
-        
+
         function startGame(levelIndex) {
             currentLevel = levelIndex;
-            // Shuffle words for the current level
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
-            
-            // ปรับความเร็วตามเลเวล: Level 10 (index 9) เร็วที่สุด
-            const speedFactor = levelIndex * 15; // เพิ่มความเร็ว 15 frame ต่อเลเวล
-            dropInterval = INITIAL_DROP_INTERVAL - speedFactor; 
-            if (dropInterval < 30) dropInterval = 30; // จำกัดความเร็วสูงสุด (0.5 วินาที)
 
-            // Reset State
+            const speedFactor = levelIndex * 15;
+            dropInterval = INITIAL_DROP_INTERVAL - speedFactor;
+            if (dropInterval < 30) dropInterval = 30;
+
             score = 0;
             startTime = Date.now();
             fallingIcons.length = 0;
             timeSinceLastDrop = 0;
             scoreDisplay.textContent = score;
             currentInputDisplay.textContent = 'รอพิมพ์...';
-            
-            // Show Game Elements
+
             menuScreen.style.display = 'none';
             canvas.style.display = 'block';
             topBar.style.display = 'flex';
             inputBox.style.display = 'block';
-            virtualKeyboard.style.display = 'flex'; 
-            
+            virtualKeyboard.style.display = 'flex';
+
+            resizeCanvas();
+            DANGER_ZONE_Y = canvas.height - 100;
+
             isGameRunning = true;
             if (!gameLoopId) {
-                 gameLoop();
+                gameLoop();
             }
         }
 
         function returnToMenu() {
             isGameRunning = false;
-            fallingIcons.length = 0; 
-            
-            // Hide Game Elements
+            fallingIcons.length = 0;
+
             canvas.style.display = 'none';
             topBar.style.display = 'none';
             inputBox.style.display = 'none';
@@ -438,39 +606,25 @@
             menuScreen.style.display = 'flex';
         }
 
-        // ----------------------------------------------------
-        // --- 4. TEXT-TO-SPEECH (TTS) ---
-        // ----------------------------------------------------
-
         function speakWord(word) {
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(word);
-                utterance.lang = 'en-US'; 
+                utterance.lang = 'en-US';
                 window.speechSynthesis.speak(utterance);
-            } else {
-                console.log("Text-to-Speech not supported in this browser.");
             }
         }
 
-        // ----------------------------------------------------
-        // --- 5. OBJECT FACTORY ---
-        // ----------------------------------------------------
-
         function createWordIcon() {
-            // เลือกคำศัพท์แบบสุ่มจาก levelWords
             const wordData = levelWords[Math.floor(Math.random() * levelWords.length)];
-            
-            // ความเร็วเริ่มต้น (Base speed) จะเพิ่มขึ้นตามเลเวล 
-            // Level 10 จะมี Base Speed สูงสุด แต่ Drop Interval (ความถี่) ช้าลง
             const baseSpeed = 1.5 + (currentLevel * 0.15);
-            
+
             return {
                 x: Math.random() * (canvas.width - 60) + 30,
                 y: -50,
                 icon: wordData.icon,
                 targetWord: wordData.word.toUpperCase(),
-                remainingLetters: wordData.word.toUpperCase(), 
-                speed: baseSpeed, 
+                remainingLetters: wordData.word.toUpperCase(),
+                speed: baseSpeed,
                 isDestroying: false,
                 destroyScale: 1,
                 iconSize: 40,
@@ -478,28 +632,20 @@
             };
         }
 
-        // ----------------------------------------------------
-        // --- 6. GAME LOGIC: UPDATE & DRAW ---
-        // ----------------------------------------------------
-
         function update() {
             if (!isGameRunning) return;
-            
-            // Update Time
+
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
 
-            // Icon Dropping Logic (ความถี่ในการเกิดไอคอน)
             timeSinceLastDrop++;
             if (timeSinceLastDrop >= dropInterval) {
-                // Ensure word list is not empty
                 if (levelWords.length > 0) {
                     fallingIcons.push(createWordIcon());
                 }
                 timeSinceLastDrop = 0;
             }
 
-            // Update Falling Icons
             for (let i = fallingIcons.length - 1; i >= 0; i--) {
                 const icon = fallingIcons[i];
 
@@ -507,16 +653,15 @@
                     icon.destroyScale += 0.1;
                     icon.iconSize += 2;
                     if (icon.destroyScale > 2) {
-                        fallingIcons.splice(i, 1); 
+                        fallingIcons.splice(i, 1);
                     }
                 } else {
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
-                         icon.speed = icon.baseSpeed * 1.2;
+                        icon.speed = icon.baseSpeed * 1.2;
                     }
 
                     icon.y += icon.speed;
 
-                    // Game Over Condition
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
                         alert(`Game Over! คำว่า ${icon.targetWord} ตกถึงเขตอันตราย!`);
                         returnToMenu();
@@ -531,58 +676,51 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Danger Zone
-            ctx.strokeStyle = '#f44336'; 
+            ctx.strokeStyle = '#ff4757';
             ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.moveTo(0, DANGER_ZONE_Y);
             ctx.lineTo(canvas.width, DANGER_ZONE_Y);
             ctx.stroke();
 
-            // Electric Effect 
             if (Math.floor(runningTime / 150) % 2 === 0) {
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'; 
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
                 ctx.fillRect(0, DANGER_ZONE_Y - 5, canvas.width, 10);
             }
 
-            // Draw Falling Icons
             fallingIcons.forEach(icon => {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                // 1. Draw Icon
-                ctx.globalAlpha = icon.isDestroying ? 2 - icon.destroyScale : 1; 
+                ctx.globalAlpha = icon.isDestroying ? 2 - icon.destroyScale : 1;
                 ctx.font = `${icon.iconSize}px Arial`;
                 ctx.fillText(icon.icon, icon.x, icon.y);
                 ctx.globalAlpha = 1;
 
-                // 2. Draw Remaining Word (Navy Blue Text)
                 if (!icon.isDestroying) {
-                    ctx.font = '16px Arial';
-                    ctx.fillStyle = '#1a237e'; 
-                    ctx.fillText(icon.remainingLetters, icon.x, icon.y + icon.iconSize / 2 + 10);
+                    ctx.font = 'bold 16px Arial';
+                    ctx.fillStyle = '#1a237e';
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.strokeText(icon.remainingLetters, icon.x, icon.y + icon.iconSize / 2 + 15);
+                    ctx.fillText(icon.remainingLetters, icon.x, icon.y + icon.iconSize / 2 + 15);
                 }
             });
         }
 
-        // ----------------------------------------------------
-        // --- 7. INPUT HANDLING & VIRTUAL KEYBOARD ---
-        // ----------------------------------------------------
-        
-        // แป้นพิมพ์เสมือนจริง (จัด QWERTY)
         function createVirtualKeyboard() {
             const rows = [
                 "QWERTYUIOP",
                 "ASDFGHJKL",
                 "ZXCVBNM"
             ];
-            
-            virtualKeyboard.innerHTML = ''; 
+
+            virtualKeyboard.innerHTML = '';
 
             rows.forEach(rowKeys => {
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'keyboard-row';
-                
+
                 for (let i = 0; i < rowKeys.length; i++) {
                     const key = rowKeys[i];
                     const button = document.createElement('button');
@@ -595,7 +733,6 @@
             });
         }
 
-        // แป้นพิมพ์จริง
         document.addEventListener('keydown', (e) => {
             if (isGameRunning) {
                 handleInput(e.key.toUpperCase());
@@ -604,43 +741,38 @@
 
         function handleInput(typedKey) {
             if (!isGameRunning || typedKey.length !== 1 || typedKey < 'A' || typedKey > 'Z') {
-                return; 
+                return;
             }
-            
+
             let foundMatch = false;
-            
+
             for (let i = 0; i < fallingIcons.length; i++) {
                 const icon = fallingIcons[i];
                 if (icon.isDestroying) continue;
-                
+
                 const matchIndex = icon.remainingLetters.indexOf(typedKey);
-                
+
                 if (matchIndex !== -1) {
                     foundMatch = true;
-                    
-                    // 1. Remove the letter
-                    icon.remainingLetters = icon.remainingLetters.slice(0, matchIndex) + 
-                                            icon.remainingLetters.slice(matchIndex + 1);
-                    
-                    // 2. Check for word completion
+
+                    icon.remainingLetters = icon.remainingLetters.slice(0, matchIndex) +
+                        icon.remainingLetters.slice(matchIndex + 1);
+
                     if (icon.remainingLetters.length === 0) {
-                        score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10); 
+                        score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10);
                         scoreDisplay.textContent = score;
-                        icon.isDestroying = true; 
-                        
-                        // 3. Speak the word!
-                        speakWord(icon.targetWord); 
+                        icon.isDestroying = true;
+
+                        speakWord(icon.targetWord);
                     }
-                    
-                    // 4. Success Feedback
+
                     currentInputDisplay.textContent = typedKey;
-                    
-                    break; 
+
+                    break;
                 }
             }
-            
+
             if (!foundMatch) {
-                // Error Feedback
                 currentInputDisplay.textContent = typedKey;
                 currentInputDisplay.classList.add('typed-error');
                 setTimeout(() => {
@@ -650,18 +782,13 @@
             }
         }
 
-        // ----------------------------------------------------
-        // --- 8. HELPER FUNCTIONS & GAME LOOP ---
-        // ----------------------------------------------------
-        
         function formatTime(ms) {
             const totalSeconds = Math.floor(ms / 1000);
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
             return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
         }
-        
-        // Control Button Handler
+
         pauseBtn.onclick = returnToMenu;
 
         function gameLoop() {
@@ -669,13 +796,14 @@
                 update();
                 draw();
             }
-            gameLoopId = requestAnimationFrame(gameLoop); 
+            gameLoopId = requestAnimationFrame(gameLoop);
         }
 
-        // Initialization 
         createVirtualKeyboard();
-        generateLevels(); 
+        generateLevels();
+        resizeCanvas();
         gameLoop(); 
     </script>
 </body>
+
 </html>
