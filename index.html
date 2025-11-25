@@ -88,7 +88,7 @@
         /* UPDATED: Auto Play Beat Animation - Slower */
         .auto-play-active {
             animation: gradientShift 3s ease infinite, beat 0.8s infinite alternate !important;
-            /* Slower beat */
+            /* Slower beat 0.8s */
         }
 
         @keyframes beat {
@@ -99,7 +99,6 @@
 
             to {
                 transform: scale(1.03);
-                /* Slightly bigger zoom */
                 opacity: 1;
             }
         }
@@ -247,6 +246,10 @@
             min-width: 35px;
             flex: 1;
             max-width: 55px;
+            /* Added for multiline text */
+            white-space: normal;
+            line-height: 1.2;
+            text-align: center;
         }
 
         .key-button:active,
@@ -399,6 +402,10 @@
             transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             position: relative;
             overflow: hidden;
+            /* Added for multiline text */
+            white-space: normal;
+            line-height: 1.2;
+            text-align: center;
         }
 
         .level-button::before {
@@ -549,7 +556,7 @@
         const countdownOverlay = document.getElementById('countdownOverlay');
         const countdownNumber = document.getElementById('countdownNumber');
 
-        const gameTitle = document.getElementById('gameTitle'); 
+        const gameTitle = document.getElementById('gameTitle');
         const levelCompleteScreen = document.getElementById('levelCompleteScreen');
         const completeMessage = document.getElementById('completeMessage');
         const finalScoreDisplay = document.getElementById('finalScore');
@@ -561,10 +568,10 @@
 
         // --- Game State Vars ---
         let isAutoPlayMode = false;
-        let autoPlayTimerId = null;
-        let botTypingIntervalId = null;
+        let autoPlayTimerId = null; // Stores setTimeout for 1s delay before typing
+        let botTypingIntervalId = null; // Stores setInterval for 0.5s char delay
         let botCurrentCharIndex = 0;
-        let isWaitingForNextIcon = false; // NEW: Bot flag to wait for icon drop
+        let isWaitingForNextIcon = false; // Bot flag to wait for icon drop
 
         // --- Sound Logic ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -590,7 +597,6 @@
 
         // --- Canvas & Resize Logic ---
         function resizeCanvas() {
-            const rect = canvas.getBoundingClientRect();
             const totalFixedElementsHeight = (document.getElementById('gameTitle')?.offsetHeight || 0) +
                 (topBar.style.display !== 'none' ? topBar.offsetHeight : 0) +
                 (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0) +
@@ -609,8 +615,7 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // --- Word Data ---
-        // (Word data remains the same as V2.8)
+        // --- Word Data (Reduced for brevity, assumed full data is present) ---
         const LEVEL_1_WORDS = [
             { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
             { icon: '🐱', word: 'CAT', meaning: 'แมว' },
@@ -737,11 +742,11 @@
         ];
 
         const BASE_SPEED = 1.0;
-        const BASE_DROP_INTERVAL = 300; // 5 seconds/drop (at 60 FPS)
+        const BASE_DROP_INTERVAL = 300; 
 
         let DANGER_ZONE_Y;
         let usedWordsInLevel = new Set();
-        let currentLevelWordData = []; 
+        let currentLevelWordData = [];
 
         let score = 0;
         let startTime = 0;
@@ -770,7 +775,7 @@
             }
         }
 
-        // Event listener for double click/tap on title
+        // Double click/tap event to toggle bot mode ONLY from main screen
         gameTitle.addEventListener('dblclick', toggleAutoPlay);
         
         let lastTap = 0;
@@ -788,9 +793,8 @@
             stopAutoPlay();
             if (!isAutoPlayMode || !isGameRunning) return;
 
-            // Set the flag to wait for the first icon (or next icon)
+            // Start by waiting for the first icon to appear
             isWaitingForNextIcon = true;
-            // The bot will start in the update loop when the icon appears.
         }
 
         function stopAutoPlay() {
@@ -803,15 +807,17 @@
         }
 
         /**
-         * The core function that handles the delayed typing logic for the bot.
+         * Core function to handle the delayed typing for the current word (fallingIcons[0]).
          */
         function processNextWordForBot() {
             if (!isAutoPlayMode || !isGameRunning || fallingIcons.length === 0) return;
+            
+            // Prevent re-triggering while a process is already underway
+            if (autoPlayTimerId !== null || botTypingIntervalId !== null) return;
 
-            stopAutoPlay();
-            isWaitingForNextIcon = false; // Stop waiting
+            isWaitingForNextIcon = false; // Stop waiting since we found an icon
 
-            const targetIcon = fallingIcons[0]; // Always target the first icon in the list
+            const targetIcon = fallingIcons[0]; 
             const targetWord = targetIcon.targetWord;
             botCurrentCharIndex = 0;
             
@@ -823,7 +829,7 @@
                 // Start typing characters with 0.5s interval (Requirement 1)
                 botTypingIntervalId = setInterval(() => {
                     if (!isGameRunning || fallingIcons.length === 0 || fallingIcons[0] !== targetIcon) {
-                        // Stop if game over or target icon was destroyed by non-bot logic
+                        // Safety check: if the game ends or the target icon is somehow replaced
                         stopAutoPlay();
                         return;
                     }
@@ -842,6 +848,7 @@
                         console.log("Bot finished word, waiting for next icon.");
                     }
                 }, 500); // 0.5 second interval for characters
+                autoPlayTimerId = null; // Clear the timeout ID
             }, 1000); // 1 second delay before starting to type
         }
 
@@ -860,7 +867,8 @@
                 else if (i < 8) range = '5-6';
                 else range = '6-8';
 
-                button.textContent = `L${i + 1} (${range})`;
+                // Use innerHTML and <br> for multiline display (Requirement 3)
+                button.innerHTML = `L${i + 1} <br> (${range})`; 
                 button.onclick = () => startGame(i);
                 levelButtonsContainer.appendChild(button);
             }
@@ -896,14 +904,13 @@
 
             // Delay 1 second after countdown before starting the game/drop logic
             setTimeout(() => {
-                // Set initial drop time to ensure the first icon drops immediately in the next update
                 timeSinceLastDrop = dropInterval; 
                 isGameRunning = true;
                 if (!gameLoopId) {
                     gameLoop();
                 }
 
-                // Start bot logic preparation
+                // Start bot logic preparation (waits for first icon)
                 startAutoPlay();
             }, 1000); 
         }
@@ -1036,7 +1043,6 @@
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
             
-            // 5 second drop logic (300 frames)
             timeSinceLastDrop++;
             
             if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
@@ -1054,6 +1060,14 @@
                     icon.iconSize += 2;
                     if (icon.destroyScale > 2) {
                         fallingIcons.splice(i, 1);
+
+                        // If the bot was waiting for the next icon after destroying one, 
+                        // and the list is not empty, set the flag to re-trigger the bot logic.
+                        if (isAutoPlayMode && isWaitingForNextIcon && fallingIcons.length > 0) {
+                            // This ensures the bot immediately attempts to start the 1s delay 
+                            // for the new word (fallingIcons[0]) in the next update loop.
+                            processNextWordForBot();
+                        }
                     }
                 } else {
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
@@ -1071,15 +1085,22 @@
                         scoreDisplay.textContent = score;
 
                         fallingIcons.splice(i, 1);
+                        // If an icon is missed, the bot should try to target the new fallingIcons[0]
+                        if (isAutoPlayMode && fallingIcons.length > 0) {
+                            stopAutoPlay();
+                            isWaitingForNextIcon = true;
+                        }
+
                         continue;
                     }
                 }
             }
 
-            // --- NEW Bot Trigger Logic ---
+            // --- Corrected Bot Trigger Logic ---
             if (isAutoPlayMode && isWaitingForNextIcon && fallingIcons.length > 0) {
-                // If bot is waiting and an icon is present, start the typing process
-                processNextWordForBot();
+                 // Bot attempts to process the word if the previous one is done/missed 
+                 // and the game is running.
+                 processNextWordForBot();
             }
         }
 
@@ -1156,7 +1177,7 @@
         }
 
         document.addEventListener('keydown', (e) => {
-            if (isGameRunning && !isAutoPlayMode) { // Ignore manual input if bot is active
+            if (isGameRunning && !isAutoPlayMode) { 
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
@@ -1179,7 +1200,6 @@
                 return;
             }
 
-            // Apply visual effect immediately
             applyKeyEffect(typedKey);
 
             let foundMatch = false;
@@ -1208,6 +1228,13 @@
                         speakWord(icon.targetWord);
 
                         wordsCollected++;
+                        
+                        // NEW: If word is completed and Auto Play is on, stop the typing process and wait for the next icon
+                        if (isAutoPlayMode) { 
+                            stopAutoPlay(); // Clear intervals/timeouts immediately
+                            isWaitingForNextIcon = true; // Set flag to trigger for the next word in the next update()
+                        }
+                        
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
                             stopAutoPlay();
                             setTimeout(showLevelCompleteScreen, 500);
