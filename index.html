@@ -236,7 +236,9 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
-        #menuScreen {
+        /* Menu Screens Style */
+        #menuScreen,
+        #levelCompleteScreen {
             position: absolute;
             top: 0;
             left: 0;
@@ -249,13 +251,13 @@
             justify-content: center;
             z-index: 100;
             padding: 20px;
+            text-align: center;
         }
 
         #menuTitle {
             font-size: clamp(28px, 7vw, 42px);
             font-weight: 900;
             color: #ffffff;
-            text-align: center;
             margin-bottom: 30px;
             text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
             background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
@@ -272,6 +274,46 @@
             margin-bottom: 20px;
             text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
             font-weight: 800;
+        }
+
+        #levelCompleteScreen #completeMessage {
+            font-size: clamp(28px, 7vw, 42px);
+            font-weight: 900;
+            color: #feca57;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+        }
+
+        #levelCompleteScreen #finalScore {
+            font-size: clamp(20px, 5vw, 32px);
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 40px;
+        }
+
+        .menu-btn {
+            width: 80%;
+            max-width: 300px;
+            padding: 15px 10px;
+            font-size: clamp(16px, 4vw, 20px);
+            font-weight: 800;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        #nextLevelBtn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .menu-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
         }
 
         #countdownOverlay {
@@ -421,6 +463,13 @@
             <div id="levelButtonsContainer"></div>
         </div>
 
+        <div id="levelCompleteScreen" style="display: none;">
+            <div id="completeMessage">Level X Complete!</div>
+            <div id="finalScore">Score: 0</div>
+            <button id="nextLevelBtn" class="menu-btn">เลเวลถัดไป 🚀</button>
+            <button id="returnToMenuBtn" class="menu-btn">กลับหน้าหลัก</button>
+        </div>
+
         <div id="countdownOverlay">
             <div id="countdownNumber">3</div>
         </div>
@@ -440,12 +489,28 @@
         const levelButtonsContainer = document.getElementById('levelButtonsContainer');
         const countdownOverlay = document.getElementById('countdownOverlay');
         const countdownNumber = document.getElementById('countdownNumber');
+        
+        // NEW Elements for Level Completion Screen
+        const levelCompleteScreen = document.getElementById('levelCompleteScreen');
+        const completeMessage = document.getElementById('completeMessage');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        const returnToMenuBtnComplete = document.getElementById('returnToMenuBtn');
+        
         let gameLoopId;
 
+        // --- Canvas & Resize Logic ---
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
+            // Calculate height excluding the title bar, input box, and keyboard
+            const totalFixedElementsHeight = (document.getElementById('gameTitle')?.offsetHeight || 0) + 
+                                            (topBar.style.display !== 'none' ? topBar.offsetHeight : 0) + 
+                                            (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0) + 
+                                            (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0);
+            
             canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - rect.top - (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0) - (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0);
+            canvas.height = window.innerHeight - totalFixedElementsHeight;
+            
             if (isGameRunning) {
                 DANGER_ZONE_Y = canvas.height - 60;
             }
@@ -456,6 +521,7 @@
             setTimeout(resizeCanvas, 100);
         });
 
+        // --- Word Data (v2.0: Icon and Structure Update) ---
         const LEVEL_1_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
             { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
@@ -466,7 +532,7 @@
             { icon: '🌳', word: 'TREE', meaning: 'ต้นไม้' },
             { icon: '🚗', word: 'CAR', meaning: 'รถยนต์' },
             { icon: '⚽', word: 'BALL', meaning: 'ลูกบอล' },
-            { icon: '✏️', word: 'PEN', meaning: 'ปากกา' },
+            { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' }, // UPDATED ICON: ✏️ -> 🖋️
         ];
 
         const LEVEL_2_WORDS = [
@@ -601,14 +667,20 @@
         let timeSinceLastDrop = 0;
 
         const INITIAL_DROP_INTERVAL = 260;
+        const TOTAL_WORDS_TO_COLLECT = 10; // NEW: Level completion requirement
 
         let dropInterval = INITIAL_DROP_INTERVAL;
         let isGameRunning = false;
         let currentLevel = 0;
         let levelWords = [];
+        let wordsCollected = 0; // NEW: Counter for collected words
+
+        // --- Game Flow Functions ---
 
         function generateLevels() {
             levelButtonsContainer.innerHTML = '';
+            // Ensure Level Complete screen is hidden when menu loads
+            levelCompleteScreen.style.display = 'none';
 
             for (let i = 0; i < 10; i++) {
                 const button = document.createElement('button');
@@ -631,25 +703,61 @@
             score = 0;
             startTime = Date.now();
             fallingIcons.length = 0;
-            timeSinceLastDrop = 0;
+            wordsCollected = 0; // NEW: Reset collected words
             scoreDisplay.textContent = score;
             currentInputDisplay.textContent = 'รอพิมพ์...';
 
             menuScreen.style.display = 'none';
+            levelCompleteScreen.style.display = 'none'; // Ensure completion screen is hidden
             canvas.style.display = 'block';
             topBar.style.display = 'flex';
             inputBox.style.display = 'block';
             virtualKeyboard.style.display = 'flex';
 
+            // Must resize before countdown to get correct DANGER_ZONE_Y
             resizeCanvas();
             DANGER_ZONE_Y = canvas.height - 60;
 
             await showCountdown();
 
+            // NEW: Drop the first icon immediately after countdown (Requirement 2)
+            timeSinceLastDrop = dropInterval; 
+
             isGameRunning = true;
             if (!gameLoopId) {
                 gameLoop();
             }
+        }
+        
+        function showLevelCompleteScreen() {
+            // Requirement 1: Show completion screen and navigation
+            isGameRunning = false;
+            canvas.style.display = 'none';
+            topBar.style.display = 'none';
+            inputBox.style.display = 'none';
+            virtualKeyboard.style.display = 'none';
+
+            levelCompleteScreen.style.display = 'flex';
+            
+            completeMessage.textContent = `Level ${currentLevel + 1} Complete! 🎉`;
+            finalScoreDisplay.textContent = `Final Score: ${score}`;
+            
+            // Set Next Level Button
+            if (currentLevel < ALL_LEVEL_WORDS.length - 1) {
+                nextLevelBtn.style.display = 'block';
+                nextLevelBtn.onclick = () => {
+                    // Check if level index is valid before starting
+                    if (currentLevel + 1 < ALL_LEVEL_WORDS.length) {
+                        startGame(currentLevel + 1);
+                    } else {
+                        returnToMenu();
+                    }
+                };
+            } else {
+                nextLevelBtn.style.display = 'none'; // Max level reached
+                completeMessage.textContent = `All Levels Complete! 🏆`;
+            }
+            returnToMenuBtnComplete.onclick = returnToMenu;
         }
 
         function showCountdown() {
@@ -683,10 +791,12 @@
             topBar.style.display = 'none';
             inputBox.style.display = 'none';
             virtualKeyboard.style.display = 'none';
+            levelCompleteScreen.style.display = 'none'; // Ensure completion screen is hidden
             menuScreen.style.display = 'flex';
         }
 
         function speakWord(word) {
+            // Requirement 4: TTS reads the full word (already implemented correctly)
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(word);
                 utterance.lang = 'en-US';
@@ -697,6 +807,7 @@
         function createWordIcon() {
             let availableWords = levelWords.filter(w => !usedWordsInLevel.has(w.word));
 
+            // If all words are used, clear the set to start recycling (to maintain continuous game flow until 10 collected)
             if (availableWords.length === 0) {
                 usedWordsInLevel.clear();
                 availableWords = levelWords;
@@ -721,6 +832,7 @@
             };
         }
 
+        // --- Game Loop Logic ---
         function update() {
             if (!isGameRunning) return;
 
@@ -751,10 +863,16 @@
 
                     icon.y += icon.speed;
 
+                    // Requirement 3: Score Deduction instead of Game Over
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
-                        alert(`Game Over! คำว่า ${icon.targetWord} ตกถึงเขตอันตราย!`);
-                        returnToMenu();
-                        return;
+                        // Deduct score
+                        score -= 15; 
+                        if (score < 0) score = 0; 
+                        scoreDisplay.textContent = score;
+                        
+                        // Remove fallen icon. The word must be collected successfully later.
+                        fallingIcons.splice(i, 1);
+                        continue; 
                     }
                 }
             }
@@ -797,6 +915,7 @@
             });
         }
 
+        // --- Input and Utility Functions (Unchanged) ---
         function createVirtualKeyboard() {
             const rows = [
                 "QWERTYUIOP",
@@ -853,6 +972,13 @@
                         icon.isDestroying = true;
 
                         speakWord(icon.targetWord);
+                        
+                        // NEW: Check for level completion (Requirement 1)
+                        wordsCollected++;
+                        if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
+                            // Delay slightly to allow the destruction animation to start
+                            setTimeout(showLevelCompleteScreen, 500); 
+                        }
                     }
 
                     currentInputDisplay.textContent = typedKey;
@@ -888,6 +1014,7 @@
             gameLoopId = requestAnimationFrame(gameLoop);
         }
 
+        // --- Initialization ---
         createVirtualKeyboard();
         generateLevels();
         resizeCanvas();
