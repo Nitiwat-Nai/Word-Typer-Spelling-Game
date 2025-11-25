@@ -578,13 +578,15 @@
         const synth = window.speechSynthesis;
         let speechQueue = [];
         
-        // NEW GLOBAL: Callback to run when the last queued speech finishes
-        let levelCompleteCallback = null; 
 
-        // Function to handle sequential speaking and transition callback
+        // Function to handle sequential speaking
         function speakWord(word) {
             if (!synth) return null;
-
+            
+            // Clear any currently speaking or pending speech to ensure this word is spoken immediately
+            synth.cancel();
+            speechQueue.length = 0; 
+            
             const utterance = new SpeechSynthesisUtterance(word);
             
             // Setup voice/rate (optional but good practice)
@@ -599,30 +601,19 @@
             speechQueue.push(utterance);
             
             // CRITICAL: Single comprehensive onend handler
+            // This is kept simple, only managing the queue for subsequent words (if any were added before this one finished).
             utterance.onend = () => {
-                speechQueue.shift(); // 1. Remove the finished utterance
-
-                // 2. Check if the level is complete and this was the last word's speech
-                if (levelCompleteCallback) {
-                    const tempCallback = levelCompleteCallback;
-                    levelCompleteCallback = null; // Clear it immediately
-                    
-                    // Delay slightly to ensure destruction animation starts/finishes
-                    setTimeout(() => { 
-                         tempCallback(); 
-                    }, 300); 
-
-                } else if (speechQueue.length > 0) {
-                    // 3. Normal queue processing: Start the next one
+                speechQueue.shift(); 
+                if (speechQueue.length > 0) {
                     synth.speak(speechQueue[0]); 
                 }
             };
             
-            // Start speaking the first item if the queue was empty before adding this one
+            // Start speaking 
             if (speechQueue.length === 1 && !synth.speaking) {
                 synth.speak(utterance);
             }
-            return utterance; // Return the utterance object
+            return utterance; 
         }
 
         // --- Sound Logic ---
@@ -967,10 +958,9 @@
             currentInputDisplay.textContent = 'รอพิมพ์...';
             stopAutoPlay(); 
             
-            // Clear speech queue and completion flag
+            // Clear speech queue
             if (synth) synth.cancel();
             speechQueue.length = 0;
-            levelCompleteCallback = null; // Ensure this is clean
 
 
             menuScreen.style.display = 'none';
@@ -1016,13 +1006,12 @@
         }
 
         function showLevelCompleteScreen() {
-            // This function is now only called via the audio callback after the last word
+            // This function is now called directly or via a fixed timeout.
             isGameRunning = false;
             fallingIcons.length = 0;
             stopAutoPlay(); 
             if (synth) synth.cancel();
             speechQueue.length = 0;
-            levelCompleteCallback = null; // Clean up just in case
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -1080,7 +1069,6 @@
             stopAutoPlay(); 
             if (synth) synth.cancel();
             speechQueue.length = 0;
-            levelCompleteCallback = null; // Clean up
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -1119,25 +1107,22 @@
 
         // --- Game Loop Logic ---
         function update() {
-            // Only run if the game is active (or if waiting for completion callback)
-            if (!isGameRunning && !levelCompleteCallback) return;
+            // Only run if the game is active 
+            if (!isGameRunning) return;
 
-            // Only update game state (movement, drops) if game is running
-            if (isGameRunning) {
-                runningTime = Date.now() - startTime;
-                timeDisplay.textContent = formatTime(runningTime);
-                
-                timeSinceLastDrop++;
-                
-                if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
-                    if (levelWords.length > 0) {
-                        fallingIcons.push(createWordIcon());
-                    }
-                    timeSinceLastDrop = 0;
-                }
-            } 
+            runningTime = Date.now() - startTime;
+            timeDisplay.textContent = formatTime(runningTime);
             
-            // This part runs regardless of isGameRunning to allow destruction animation cleanup
+            timeSinceLastDrop++;
+            
+            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
+                if (levelWords.length > 0) {
+                    fallingIcons.push(createWordIcon());
+                }
+                timeSinceLastDrop = 0;
+            }
+            
+            
             for (let i = fallingIcons.length - 1; i >= 0; i--) {
                 const icon = fallingIcons[i];
 
@@ -1148,30 +1133,28 @@
                         fallingIcons.splice(i, 1);
                     }
                 } else {
-                    if (isGameRunning) {
-                        if (icon.remainingLetters.length < icon.targetWord.length / 2) {
-                            icon.speed = icon.baseSpeed * 1.2;
+                    if (icon.remainingLetters.length < icon.targetWord.length / 2) {
+                        icon.speed = icon.baseSpeed * 1.2;
+                    }
+
+                    icon.y += icon.speed;
+
+                    // Score Deduction 
+                    if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
+                        playSound(150, 0.15, 'sine', 0.8); 
+
+                        score -= 15;
+                        if (score < 0) score = 0;
+                        scoreDisplay.textContent = score;
+
+                        fallingIcons.splice(i, 1);
+                        // If an icon is missed, the bot should try to target the new first icon
+                        if (isAutoPlayMode && fallingIcons.length > 0) {
+                            stopAutoPlay();
+                            isWaitingForNextIcon = true;
                         }
 
-                        icon.y += icon.speed;
-
-                        // Score Deduction 
-                        if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
-                            playSound(150, 0.15, 'sine', 0.8); 
-
-                            score -= 15;
-                            if (score < 0) score = 0;
-                            scoreDisplay.textContent = score;
-
-                            fallingIcons.splice(i, 1);
-                            // If an icon is missed, the bot should try to target the new first icon
-                            if (isAutoPlayMode && fallingIcons.length > 0) {
-                                stopAutoPlay();
-                                isWaitingForNextIcon = true;
-                            }
-
-                            continue;
-                        }
+                        continue;
                     }
                 }
             }
@@ -1276,14 +1259,9 @@
         }
 
         function handleInput(typedKey) {
-            // Allow input only if the game is running OR if we are processing the last word (wordsCollected == TOTAL_WORDS_TO_COLLECT - 1)
-            // Note: Since wordsCollected is checked *after* increment, we only need to check isGameRunning for normal input
             if (!isGameRunning && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
-                 // But we must allow the last key of the last word to pass through.
-                 // We don't need this complex check if we ensure isGameRunning is only false at the end.
-                 // Let's rely on the check inside the loop.
+                return;
             }
-
 
             if (typedKey.length !== 1 || typedKey < 'A' || typedKey > 'Z') {
                 return;
@@ -1315,7 +1293,7 @@
                         icon.isDestroying = true;
 
                         // Speak the word immediately
-                        const utterance = speakWord(icon.targetWord);
+                        speakWord(icon.targetWord);
 
                         wordsCollected++;
                         
@@ -1326,22 +1304,14 @@
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // 1. Stop the game logic (drops, bot, time) immediately
+                            // NEW LOGIC: Stop game immediately and use a 2 second timeout for transition
                             isGameRunning = false; 
-                            stopAutoPlay(); // Stop bot just in case
-
-                            const finalizeLevelTransition = () => {
-                                // This function is executed by the utterance.onend handler
+                            stopAutoPlay(); 
+                            
+                            // Delay 2 seconds to allow the final word's speech to play
+                            setTimeout(() => { 
                                 showLevelCompleteScreen();
-                            };
-
-                            if (utterance) {
-                                // 2. Set the global callback to be triggered when this *last* utterance finishes
-                                levelCompleteCallback = finalizeLevelTransition;
-                            } else {
-                                // 2. Fallback if speech is disabled/not supported (Call immediately)
-                                finalizeLevelTransition();
-                            }
+                            }, 2000); 
                         }
                     }
 
