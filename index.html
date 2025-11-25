@@ -572,50 +572,8 @@
         let botTypingIntervalId = null; 
         let botCurrentCharIndex = 0;
         let isWaitingForNextIcon = false; 
-        let botCurrentTarget = null; 
+        let botCurrentTarget = null; // NEW: The specific icon object the bot is currently typing/waiting for
 
-        // --- Speech Synthesis Logic ---
-        const synth = window.speechSynthesis;
-        let speechQueue = [];
-        let isSpeaking = false; 
-        
-        // NEW: Function to check if speech is active
-        function isSpeechSynthesisActive() {
-            return synth.speaking || speechQueue.length > 0;
-        }
-
-        function speakWord(word) {
-            // Only speak if words are collected (to avoid speaking at init)
-            if (wordsCollected > 0 && synth) {
-                const utterance = new SpeechSynthesisUtterance(word);
-                
-                // Get a common English voice, or default
-                const voices = synth.getVoices();
-                const enVoice = voices.find(voice => voice.lang.startsWith('en-'));
-                if (enVoice) {
-                    utterance.voice = enVoice;
-                }
-                
-                utterance.pitch = 1.0; 
-                utterance.rate = 0.8; 
-
-                // Ensure the utterance is added to the queue for sequential playback
-                speechQueue.push(utterance);
-                
-                utterance.onend = () => {
-                    speechQueue.shift(); // Remove the finished utterance
-                    if (speechQueue.length > 0) {
-                        synth.speak(speechQueue[0]); // Start the next one
-                    }
-                };
-                
-                // Start speaking the first item if the queue was empty
-                if (speechQueue.length === 1 && !synth.speaking) {
-                    synth.speak(utterance);
-                }
-            }
-        }
-        
         // --- Sound Logic ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -632,20 +590,11 @@
             gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
 
             oscillator.connect(gainNode);
-            gainNode.connect(audioNode.destination);
+            gainNode.connect(audioContext.destination);
 
             oscillator.start();
             oscillator.stop(audioContext.currentTime + duration);
         }
-        
-        // Fix for webkit compatibility and delayed voice loading
-        let audioNode = audioContext.destination;
-        if (synth && synth.getVoices().length === 0) {
-            synth.onvoiceschanged = () => {
-                // Voices loaded
-            };
-        }
-
 
         // --- Canvas & Resize Logic ---
         function resizeCanvas() {
@@ -813,9 +762,6 @@
         let currentLevel = 0;
         let levelWords = [];
         let wordsCollected = 0;
-        
-        // NEW: Flag to indicate word completion logic is pending (waiting for speech/destruction)
-        let isLevelCompletePending = false; 
 
         // --- Auto Play Logic ---
 
@@ -956,14 +902,9 @@
             startTime = Date.now();
             fallingIcons.length = 0;
             wordsCollected = 0;
-            isLevelCompletePending = false; 
             scoreDisplay.textContent = score;
             currentInputDisplay.textContent = 'รอพิมพ์...';
             stopAutoPlay(); 
-
-            // Clear speech queue
-            synth.cancel();
-            speechQueue.length = 0;
 
             menuScreen.style.display = 'none';
             levelCompleteScreen.style.display = 'none';
@@ -1008,6 +949,7 @@
         }
 
         function showLevelCompleteScreen() {
+            isGameRunning = false;
             fallingIcons.length = 0;
             stopAutoPlay(); 
 
@@ -1036,7 +978,6 @@
                 completeMessage.textContent = `All Levels Complete! 🏆`;
             }
             returnToMenuBtnComplete.onclick = returnToMenu;
-            isLevelCompletePending = false; // Reset the flag
         }
 
         function showCountdown() {
@@ -1064,11 +1005,8 @@
 
         function returnToMenu() {
             isGameRunning = false;
-            isLevelCompletePending = false; 
             fallingIcons.length = 0;
             stopAutoPlay(); 
-            synth.cancel();
-            speechQueue.length = 0;
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -1076,6 +1014,10 @@
             virtualKeyboard.style.display = 'none';
             levelCompleteScreen.style.display = 'none';
             menuScreen.style.display = 'flex';
+        }
+
+        function speakWord(word) {
+            // Speech synthesis disabled
         }
 
         function createWordIcon() {
@@ -1107,36 +1049,24 @@
 
         // --- Game Loop Logic ---
         function update() {
-            if (!isGameRunning && !isLevelCompletePending) return;
+            if (!isGameRunning) return;
 
-            // NEW: Check if game completion conditions are met (Word done, destruction done, speech done)
-            if (isLevelCompletePending && fallingIcons.length === 0 && !isSpeechSynthesisActive()) {
+            if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
                 showLevelCompleteScreen();
                 return;
             }
 
-            if (isGameRunning && wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                // If game is running and collection is complete, stop game but wait for destruction/speech
-                isGameRunning = false; 
-                isLevelCompletePending = true;
-                stopAutoPlay();
-            }
-
-
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
             
-            // Only drop new icons if the game is still running
-            if (isGameRunning) {
-                timeSinceLastDrop++;
-                if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
-                    if (levelWords.length > 0) {
-                        fallingIcons.push(createWordIcon());
-                    }
-                    timeSinceLastDrop = 0;
+            timeSinceLastDrop++;
+            
+            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
+                if (levelWords.length > 0) {
+                    fallingIcons.push(createWordIcon());
                 }
+                timeSinceLastDrop = 0;
             }
-
 
             for (let i = fallingIcons.length - 1; i >= 0; i--) {
                 const icon = fallingIcons[i];
@@ -1175,14 +1105,14 @@
             }
 
             // --- Corrected Bot Trigger Logic ---
-            // Only attempt to trigger bot if game is running and we are not pending level completion
-            if (isGameRunning && isAutoPlayMode && isWaitingForNextIcon) {
+            // If the bot is waiting, try to process the next word.
+            if (isAutoPlayMode && isWaitingForNextIcon) {
                  processNextWordForBot(); 
             }
         }
 
         function draw() {
-            if (!isGameRunning && !isLevelCompletePending) return;
+            if (!isGameRunning) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1302,7 +1232,6 @@
                         scoreDisplay.textContent = score;
                         icon.isDestroying = true;
 
-                        // Speak the word immediately
                         speakWord(icon.targetWord);
 
                         wordsCollected++;
@@ -1314,9 +1243,8 @@
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // NEW: Set pending flag instead of calling showLevelCompleteScreen directly
-                            isGameRunning = false;
-                            isLevelCompletePending = true;
+                            stopAutoPlay();
+                            setTimeout(showLevelCompleteScreen, 500);
                         }
                     }
 
@@ -1348,8 +1276,10 @@
         pauseBtn.onclick = returnToMenu;
 
         function gameLoop() {
-            update();
-            draw();
+            if (isGameRunning) {
+                update();
+                draw();
+            }
             gameLoopId = requestAnimationFrame(gameLoop);
         }
 
