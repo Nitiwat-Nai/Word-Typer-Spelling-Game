@@ -490,7 +490,6 @@
         const countdownOverlay = document.getElementById('countdownOverlay');
         const countdownNumber = document.getElementById('countdownNumber');
         
-        // NEW Elements for Level Completion Screen
         const levelCompleteScreen = document.getElementById('levelCompleteScreen');
         const completeMessage = document.getElementById('completeMessage');
         const finalScoreDisplay = document.getElementById('finalScore');
@@ -502,7 +501,6 @@
         // --- Canvas & Resize Logic ---
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
-            // Calculate height excluding the title bar, input box, and keyboard
             const totalFixedElementsHeight = (document.getElementById('gameTitle')?.offsetHeight || 0) + 
                                             (topBar.style.display !== 'none' ? topBar.offsetHeight : 0) + 
                                             (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0) + 
@@ -511,7 +509,8 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight - totalFixedElementsHeight;
             
-            if (isGameRunning) {
+            if (isGameRunning || menuScreen.style.display === 'none') {
+                // Adjust Danger Zone when resizing in game mode
                 DANGER_ZONE_Y = canvas.height - 60;
             }
         }
@@ -521,141 +520,154 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // --- Word Data (v2.0: Icon and Structure Update) ---
+        // --- Word Data (v2.1: New Length Constraints) ---
+        
+        // L1 & L2: 3-4 letters
         const LEVEL_1_WORDS = [
-            { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
-            { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
-            { icon: '🌟', word: 'STAR', meaning: 'ดาว' },
-            { icon: '🐱', word: 'CAT', meaning: 'แมว' },
-            { icon: '☀️', word: 'SUN', meaning: 'พระอาทิตย์' },
-            { icon: '🏠', word: 'HOUSE', meaning: 'บ้าน' },
-            { icon: '🌳', word: 'TREE', meaning: 'ต้นไม้' },
-            { icon: '🚗', word: 'CAR', meaning: 'รถยนต์' },
-            { icon: '⚽', word: 'BALL', meaning: 'ลูกบอล' },
-            { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' }, // UPDATED ICON: ✏️ -> 🖋️
+            { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' }, 
+            { icon: '🐱', word: 'CAT', meaning: 'แมว' }, 
+            { icon: '☀️', word: 'SUN', meaning: 'พระอาทิตย์' }, 
+            { icon: '🚗', word: 'CAR', meaning: 'รถยนต์' }, 
+            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' }, 
+            { icon: '🐝', word: 'BEE', meaning: 'ผึ้ง' }, 
+            { icon: '🦋', word: 'FLY', meaning: 'แมลงวัน' }, 
+            { icon: '🐸', word: 'FROG', meaning: 'กบ' }, 
+            { icon: '💧', word: 'DROP', meaning: 'หยดน้ำ' }, 
+            { icon: '🐭', word: 'MICE', meaning: 'หนู' }, 
         ];
 
         const LEVEL_2_WORDS = [
-            { icon: '🐘', word: 'ELEPHANT', meaning: 'ช้าง' },
-            { icon: '🐒', word: 'MONKEY', meaning: 'ลิง' },
-            { icon: '👑', word: 'CROWN', meaning: 'มงกุฎ' },
-            { icon: '🎸', word: 'GUITAR', meaning: 'กีตาร์' },
-            { icon: '🌊', word: 'OCEAN', meaning: 'มหาสมุทร' },
-            { icon: '🚀', word: 'ROCKET', meaning: 'จรวด' },
-            { icon: '🏔️', word: 'MOUNTAIN', meaning: 'ภูเขา' },
-            { icon: '🕰️', word: 'CLOCK', meaning: 'นาฬิกา' },
-            { icon: '🍪', word: 'COOKIE', meaning: 'คุกกี้' },
-            { icon: '☂️', word: 'UMBRELLA', meaning: 'ร่ม' },
+            { icon: '⚽', word: 'BALL', meaning: 'ลูกบอล' },
+            { icon: '🧊', word: 'CUBE', meaning: 'ลูกบาศก์' },
+            { icon: '📘', word: 'BOOK', meaning: 'หนังสือ' },
+            { icon: '🐠', word: 'FISH', meaning: 'ปลา' },
+            { icon: '🤸', word: 'JUMP', meaning: 'กระโดด' },
+            { icon: '🚶', word: 'WALK', meaning: 'เดิน' },
+            { icon: '🦁', word: 'LION', meaning: 'สิงโต' },
+            { icon: '💡', word: 'LAMP', meaning: 'โคมไฟ' },
+            { icon: '🧼', word: 'SOAP', meaning: 'สบู่' },
+            { icon: '🗄️', word: 'DESK', meaning: 'โต๊ะทำงาน' },
         ];
-
+        
+        // L3 & L4: 4-5 letters
         const LEVEL_3_WORDS = [
-            { icon: '🚁', word: 'HELICOPTER', meaning: 'เฮลิคอปเตอร์' },
-            { icon: '🌈', word: 'RAINBOW', meaning: 'รุ้ง' },
-            { icon: '🔑', word: 'KEYBOARD', meaning: 'แป้นพิมพ์' },
-            { icon: '🥕', word: 'CARROT', meaning: 'แครอท' },
-            { icon: '🚪', word: 'DOOR', meaning: 'ประตู' },
-            { icon: '💡', word: 'BULB', meaning: 'หลอดไฟ' },
-            { icon: '📞', word: 'PHONE', meaning: 'โทรศัพท์' },
-            { icon: '🪙', word: 'MONEY', meaning: 'เงิน' },
-            { icon: '🦢', word: 'SWAN', meaning: 'หงส์' },
-            { icon: '🛵', word: 'SCOOTER', meaning: 'สกู๊ตเตอร์' },
+            { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
+            { icon: '🌟', word: 'STAR', meaning: 'ดาว' },
+            { icon: '🏠', word: 'HOUSE', meaning: 'บ้าน' },
+            { icon: '🌳', word: 'TREE', meaning: 'ต้นไม้' },
+            { icon: '🔥', word: 'FIRE', meaning: 'ไฟ' },
+            { icon: '🐚', word: 'SHELL', meaning: 'เปลือกหอย' },
+            { icon: '🚂', word: 'TRAIN', meaning: 'รถไฟ' },
+            { icon: '🪑', word: 'CHAIR', meaning: 'เก้าอี้' },
+            { icon: '💦', word: 'WATER', meaning: 'น้ำ' },
+            { icon: '🧤', word: 'GLOVE', meaning: 'ถุงมือ' },
         ];
 
         const LEVEL_4_WORDS = [
+            { icon: '🐦', word: 'CROW', meaning: 'อีกา' },
+            { icon: '💡', word: 'LIGHT', meaning: 'แสง' },
+            { icon: '📞', word: 'PHONE', meaning: 'โทรศัพท์' },
+            { icon: '🪙', word: 'MONEY', meaning: 'เงิน' },
+            { icon: '🦢', word: 'SWAN', meaning: 'หงส์' },
+            { icon: '🥃', word: 'GLASS', meaning: 'แก้ว' },
+            { icon: '👄', word: 'MOUTH', meaning: 'ปาก' },
+            { icon: '👃', word: 'NOSE', meaning: 'จมูก' },
+            { icon: '✋', word: 'HANDS', meaning: 'มือ' },
+            { icon: '🦶', word: 'FOOT', meaning: 'เท้า' },
+        ];
+
+        // L5 - L8: 5-6 letters
+        const LEVEL_5_WORDS = [
+            { icon: '👑', word: 'CROWN', meaning: 'มงกุฎ' },
+            { icon: '🌊', word: 'OCEAN', meaning: 'มหาสมุทร' },
+            { icon: '🕰️', word: 'CLOCK', meaning: 'นาฬิกา' },
+            { icon: '🍪', word: 'COOKIE', meaning: 'คุกกี้' },
+            { icon: '🔑', word: 'KEY', meaning: 'กุญแจ' },
+            { icon: '🧱', word: 'BRICK', meaning: 'อิฐ' },
+            { icon: '🧲', word: 'MAGNET', meaning: 'แม่เหล็ก' },
+            { icon: '📌', word: 'PIN', meaning: 'หมุด' },
+            { icon: '🕯️', word: 'CANDLE', meaning: 'เทียน' },
+            { icon: '✏️', word: 'PENCIL', meaning: 'ดินสอ' },
+        ];
+
+        const LEVEL_6_WORDS = [
+            { icon: '🎸', word: 'GUITAR', meaning: 'กีตาร์' },
+            { icon: '🚀', word: 'ROCKET', meaning: 'จรวด' },
+            { icon: '🥇', word: 'MEDAL', meaning: 'เหรียญ' },
+            { icon: '🧅', word: 'ONION', meaning: 'หัวหอม' },
+            { icon: '🧩', word: 'PUZZLE', meaning: 'ปริศนา' },
+            { icon: '🥫', word: 'SAUCE', meaning: 'ซอส' },
+            { icon: '👕', word: 'SHIRT', meaning: 'เสื้อ' },
+            { icon: '☕', word: 'COFFEE', meaning: 'กาแฟ' },
+            { icon: '🍵', word: 'TEA', meaning: 'ชา' },
+            { icon: '🥤', word: 'JUICE', meaning: 'น้ำผลไม้' },
+        ];
+
+        const LEVEL_7_WORDS = [
+            { icon: '💿', word: 'ALBUM', meaning: 'อัลบั้ม' },
+            { icon: '🌸', word: 'FLOWER', meaning: 'ดอกไม้' },
+            { icon: '📷', word: 'CAMERA', meaning: 'กล้อง' },
+            { icon: '🪟', word: 'WINDOW', meaning: 'หน้าต่าง' },
+            { icon: '☁️', word: 'CLOUD', meaning: 'เมฆ' },
+            { icon: '😊', word: 'HAPPY', meaning: 'มีความสุข' },
+            { icon: '😴', word: 'SLEEP', meaning: 'นอน' },
+            { icon: '✍️', word: 'WRITE', meaning: 'เขียน' },
+            { icon: '📖', word: 'READ', meaning: 'อ่าน' },
+            { icon: '🏞️', word: 'RIVER', meaning: 'แม่น้ำ' },
+        ];
+
+        const LEVEL_8_WORDS = [
+            { icon: '🐧', word: 'PENGUIN', meaning: 'นกเพนกวิน' },
+            { icon: '🪡', word: 'NEEDLE', meaning: 'เข็ม' },
+            { icon: '🪖', word: 'HELMET', meaning: 'หมวกกันน็อก' },
+            { icon: '🪤', word: 'TRAP', meaning: 'กับดัก' },
+            { icon: '🗳️', word: 'VOTE', meaning: 'โหวต' },
+            { icon: '🛒', word: 'CART', meaning: 'ตะกร้า' },
+            { icon: '📐', word: 'RULER', meaning: 'ไม้บรรทัด' },
+            { icon: '🏛️', word: 'TEMPLE', meaning: 'วัด/วิหาร' },
+            { icon: '🏢', word: 'OFFICE', meaning: 'สำนักงาน' },
+            { icon: '🛣️', word: 'HIGHWAY', meaning: 'ทางด่วน' },
+        ];
+
+        // L9 & L10: 6-8 letters
+        const LEVEL_9_WORDS = [
+            { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
+            { icon: '🐘', word: 'ELEPHANT', meaning: 'ช้าง' },
+            { icon: '🐒', word: 'MONKEY', meaning: 'ลิง' },
+            { icon: '☂️', word: 'UMBRELLA', meaning: 'ร่ม' },
+            { icon: '🥕', word: 'CARROT', meaning: 'แครอท' },
+            { icon: '🛵', word: 'SCOOTER', meaning: 'สกู๊ตเตอร์' },
             { icon: '🏰', word: 'CASTLE', meaning: 'ปราสาท' },
             { icon: '💎', word: 'DIAMOND', meaning: 'เพชร' },
             { icon: '🎹', word: 'PIANO', meaning: 'เปียโน' },
             { icon: '🖼️', word: 'PICTURE', meaning: 'รูปภาพ' },
-            { icon: '🥇', word: 'MEDAL', meaning: 'เหรียญ' },
-            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
-            { icon: '🧊', word: 'ICE', meaning: 'น้ำแข็ง' },
-            { icon: '🧅', word: 'ONION', meaning: 'หัวหอม' },
-            { icon: '🐙', word: 'OCTOPUS', meaning: 'ปลาหมึกยักษ์' },
-            { icon: '🧩', word: 'PUZZLE', meaning: 'ปริศนา' },
-        ];
-
-        const LEVEL_5_WORDS = [
-            { icon: '⛵', word: 'SAILBOAT', meaning: 'เรือใบ' },
-            { icon: '🗿', word: 'STATUE', meaning: 'รูปปั้น' },
-            { icon: '🛎️', word: 'BELL', meaning: 'กระดิ่ง' },
-            { icon: '🧱', word: 'BRICK', meaning: 'อิฐ' },
-            { icon: '💻', word: 'COMPUTER', meaning: 'คอมพิวเตอร์' },
-            { icon: '🔦', word: 'FLASHLIGHT', meaning: 'ไฟฉาย' },
-            { icon: '🧲', word: 'MAGNET', meaning: 'แม่เหล็ก' },
-            { icon: '📌', word: 'PIN', meaning: 'หมุด' },
-            { icon: '🪑', word: 'CHAIR', meaning: 'เก้าอี้' },
-            { icon: '🪜', word: 'LADDER', meaning: 'บันได' },
-        ];
-
-        const LEVEL_6_WORDS = [
-            { icon: '🐧', word: 'PENGUIN', meaning: 'นกเพนกวิน' },
-            { icon: '🦒', word: 'GIRAFFE', meaning: 'ยีราฟ' },
-            { icon: '🦕', word: 'DINOSAUR', meaning: 'ไดโนเสาร์' },
-            { icon: '🪡', word: 'NEEDLE', meaning: 'เข็ม' },
-            { icon: '🪖', word: 'HELMET', meaning: 'หมวกกันน็อก' },
-            { icon: '🪦', word: 'GRAVE', meaning: 'หลุมฝังศพ' },
-            { icon: '🪣', word: 'BUCKET', meaning: 'ถัง' },
-            { icon: '🪤', word: 'TRAP', meaning: 'กับดัก' },
-            { icon: '🪠', word: 'PLUNGER', meaning: 'ลูกยางดูดส้วม' },
-            { icon: '🪗', word: 'ACCORDION', meaning: 'หีบเพลง' },
-        ];
-
-        const LEVEL_7_WORDS = [
-            { icon: '🛸', word: 'UFO', meaning: 'ยูเอฟโอ' },
-            { icon: '🛰️', word: 'SATELLITE', meaning: 'ดาวเทียม' },
-            { icon: '🔭', word: 'TELESCOPE', meaning: 'กล้องโทรทรรศน์' },
-            { icon: '🧬', word: 'DNA', meaning: 'ดีเอ็นเอ' },
-            { icon: '🔬', word: 'MICROSCOPE', meaning: 'กล้องจุลทรรศน์' },
-            { icon: '🧪', word: 'TESTTUBE', meaning: 'หลอดทดลอง' },
-            { icon: '🧫', word: 'PETRIDISH', meaning: 'จานเพาะเชื้อ' },
-            { icon: '🦠', word: 'GERM', meaning: 'เชื้อโรค' },
-            { icon: '⚗️', word: 'ALCHEMY', meaning: 'เล่นแร่แปรธาตุ' },
-            { icon: '🧲', word: 'MAGNETISM', meaning: 'แม่เหล็กไฟฟ้า' },
-        ];
-
-        const LEVEL_8_WORDS = [
-            { icon: '🗳️', word: 'VOTE', meaning: 'โหวต' },
-            { icon: '🛍️', word: 'SHOPPING', meaning: 'ช้อปปิ้ง' },
-            { icon: '🕰️', word: 'TIMEPIECE', meaning: 'นาฬิกา' },
-            { icon: '🛒', word: 'CART', meaning: 'ตะกร้า' },
-            { icon: '💸', word: 'PAYMENT', meaning: 'การชำระเงิน' },
-            { icon: '✉️', word: 'ENVELOPE', meaning: 'ซองจดหมาย' },
-            { icon: '📮', word: 'POSTBOX', meaning: 'ตู้ไปรษณีย์' },
-            { icon: '📰', word: 'NEWSPAPER', meaning: 'หนังสือพิมพ์' },
-            { icon: '🔖', word: 'BOOKMARK', meaning: 'ที่คั่นหนังสือ' },
-            { icon: '📐', word: 'RULER', meaning: 'ไม้บรรทัด' },
-        ];
-
-        const LEVEL_9_WORDS = [
-            { icon: '🗺️', word: 'MAP', meaning: 'แผนที่' },
-            { icon: '🧭', word: 'COMPASS', meaning: 'เข็มทิศ' },
-            { icon: '🏔️', word: 'LANDSCAPE', meaning: 'ภูมิประเทศ' },
-            { icon: '🏟️', word: 'STADIUM', meaning: 'สนามกีฬา' },
-            { icon: '🏛️', word: 'TEMPLE', meaning: 'วัด/วิหาร' },
-            { icon: '🏗️', word: 'CONSTRUCTION', meaning: 'การก่อสร้าง' },
-            { icon: '🏭', word: 'FACTORY', meaning: 'โรงงาน' },
-            { icon: '🏢', word: 'OFFICE', meaning: 'สำนักงาน' },
-            { icon: '🏬', word: 'DEPARTMENT', meaning: 'ห้างสรรพสินค้า' },
-            { icon: '🛣️', word: 'HIGHWAY', meaning: 'ทางด่วน' },
         ];
 
         const LEVEL_10_WORDS = [
-            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
-            { icon: '🐻', word: 'BEAR', meaning: 'หมี' },
-            { icon: '🦋', word: 'FLY', meaning: 'แมลงวัน' },
-            { icon: '🐭', word: 'MICE', meaning: 'หนู' },
-            { icon: '🐝', word: 'BEE', meaning: 'ผึ้ง' },
-            { icon: '🐸', word: 'FROG', meaning: 'กบ' },
-            { icon: '🐠', word: 'FISH', meaning: 'ปลา' },
-            { icon: '🐚', word: 'SHELL', meaning: 'เปลือกหอย' },
-            { icon: '💧', word: 'DROP', meaning: 'หยดน้ำ' },
-            { icon: '🔥', word: 'FIRE', meaning: 'ไฟ' },
+            { icon: '🗿', word: 'STATUE', meaning: 'รูปปั้น' },
+            { icon: '🪜', word: 'LADDER', meaning: 'บันได' },
+            { icon: '🦒', word: 'GIRAFFE', meaning: 'ยีราฟ' },
+            { icon: '🦕', word: 'DINOSAUR', meaning: 'ไดโนเสาร์' },
+            { icon: '🪣', word: 'BUCKET', meaning: 'ถัง' },
+            { icon: '🪗', word: 'ACCORDION', meaning: 'หีบเพลง' },
+            { icon: '🛰️', word: 'SATELLITE', meaning: 'ดาวเทียม' },
+            { icon: '💸', word: 'PAYMENT', meaning: 'การชำระเงิน' },
+            { icon: '📮', word: 'POSTBOX', meaning: 'ตู้ไปรษณีย์' },
+            { icon: '🔖', word: 'BOOKMARK', meaning: 'ที่คั่นหนังสือ' },
         ];
 
         const ALL_LEVEL_WORDS = [
             LEVEL_1_WORDS, LEVEL_2_WORDS, LEVEL_3_WORDS, LEVEL_4_WORDS, LEVEL_5_WORDS,
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
+        
+        // NEW: Drop Interval in Milliseconds for each level (Requirement)
+        const LEVEL_MS_INTERVALS = [
+            350, 340, 330, 320, 310,
+            300, 290, 280, 270, 260
+        ];
+        // Factor to convert MS to frames (1000ms / 60 FPS)
+        const MS_TO_FRAME_FACTOR = 1000 / 60; 
 
         let DANGER_ZONE_Y;
         let usedWordsInLevel = new Set();
@@ -666,26 +678,31 @@
         let fallingIcons = [];
         let timeSinceLastDrop = 0;
 
-        const INITIAL_DROP_INTERVAL = 260;
-        const TOTAL_WORDS_TO_COLLECT = 10; // NEW: Level completion requirement
+        const TOTAL_WORDS_TO_COLLECT = 10; 
 
-        let dropInterval = INITIAL_DROP_INTERVAL;
+        let dropInterval;
         let isGameRunning = false;
         let currentLevel = 0;
         let levelWords = [];
-        let wordsCollected = 0; // NEW: Counter for collected words
+        let wordsCollected = 0;
 
         // --- Game Flow Functions ---
 
         function generateLevels() {
             levelButtonsContainer.innerHTML = '';
-            // Ensure Level Complete screen is hidden when menu loads
             levelCompleteScreen.style.display = 'none';
 
             for (let i = 0; i < 10; i++) {
                 const button = document.createElement('button');
                 button.className = 'level-button';
-                button.textContent = `L${i + 1}`;
+                // Display word length range for clarity
+                let range;
+                if (i < 2) range = '3-4';
+                else if (i < 4) range = '4-5';
+                else if (i < 8) range = '5-6';
+                else range = '6-8';
+                
+                button.textContent = `L${i + 1} (${range})`;
                 button.onclick = () => startGame(i);
                 levelButtonsContainer.appendChild(button);
             }
@@ -695,32 +712,33 @@
             currentLevel = levelIndex;
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
             usedWordsInLevel.clear();
-
-            const speedFactor = levelIndex * 15;
-            dropInterval = INITIAL_DROP_INTERVAL - speedFactor;
-            if (dropInterval < 30) dropInterval = 30;
+            
+            // NEW: Calculate dropInterval based on MS targets (Requirement)
+            const targetMS = LEVEL_MS_INTERVALS[levelIndex];
+            dropInterval = Math.round(targetMS / MS_TO_FRAME_FACTOR);
+            // Ensure minimum interval is 1 frame
+            if (dropInterval < 1) dropInterval = 1; 
 
             score = 0;
             startTime = Date.now();
             fallingIcons.length = 0;
-            wordsCollected = 0; // NEW: Reset collected words
+            wordsCollected = 0;
             scoreDisplay.textContent = score;
             currentInputDisplay.textContent = 'รอพิมพ์...';
 
             menuScreen.style.display = 'none';
-            levelCompleteScreen.style.display = 'none'; // Ensure completion screen is hidden
+            levelCompleteScreen.style.display = 'none';
             canvas.style.display = 'block';
             topBar.style.display = 'flex';
             inputBox.style.display = 'block';
             virtualKeyboard.style.display = 'flex';
 
-            // Must resize before countdown to get correct DANGER_ZONE_Y
             resizeCanvas();
             DANGER_ZONE_Y = canvas.height - 60;
 
             await showCountdown();
 
-            // NEW: Drop the first icon immediately after countdown (Requirement 2)
+            // Start dropping immediately after countdown (Requirement 2)
             timeSinceLastDrop = dropInterval; 
 
             isGameRunning = true;
@@ -730,7 +748,6 @@
         }
         
         function showLevelCompleteScreen() {
-            // Requirement 1: Show completion screen and navigation
             isGameRunning = false;
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -742,11 +759,9 @@
             completeMessage.textContent = `Level ${currentLevel + 1} Complete! 🎉`;
             finalScoreDisplay.textContent = `Final Score: ${score}`;
             
-            // Set Next Level Button
             if (currentLevel < ALL_LEVEL_WORDS.length - 1) {
                 nextLevelBtn.style.display = 'block';
                 nextLevelBtn.onclick = () => {
-                    // Check if level index is valid before starting
                     if (currentLevel + 1 < ALL_LEVEL_WORDS.length) {
                         startGame(currentLevel + 1);
                     } else {
@@ -754,7 +769,7 @@
                     }
                 };
             } else {
-                nextLevelBtn.style.display = 'none'; // Max level reached
+                nextLevelBtn.style.display = 'none'; 
                 completeMessage.textContent = `All Levels Complete! 🏆`;
             }
             returnToMenuBtnComplete.onclick = returnToMenu;
@@ -791,12 +806,11 @@
             topBar.style.display = 'none';
             inputBox.style.display = 'none';
             virtualKeyboard.style.display = 'none';
-            levelCompleteScreen.style.display = 'none'; // Ensure completion screen is hidden
+            levelCompleteScreen.style.display = 'none'; 
             menuScreen.style.display = 'flex';
         }
 
         function speakWord(word) {
-            // Requirement 4: TTS reads the full word (already implemented correctly)
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(word);
                 utterance.lang = 'en-US';
@@ -807,17 +821,20 @@
         function createWordIcon() {
             let availableWords = levelWords.filter(w => !usedWordsInLevel.has(w.word));
 
-            // If all words are used, clear the set to start recycling (to maintain continuous game flow until 10 collected)
             if (availableWords.length === 0) {
-                usedWordsInLevel.clear();
+                // If all 10 unique words are currently in use (either collected or falling),
+                // we recycle from the main list but only words that haven't been collected yet.
+                // Note: The logic handles collected words (wordsCollected < 10)
+                usedWordsInLevel.clear(); 
                 availableWords = levelWords;
             }
 
             const wordData = availableWords[Math.floor(Math.random() * availableWords.length)];
             usedWordsInLevel.add(wordData.word);
 
-            const baseSpeed = 1.0 + (currentLevel * 0.12);
-
+            // NEW: Adjust Falling Speed (0.8 for L1 up to 2.0 for L10)
+            const baseSpeed = 0.8 + (currentLevel * 0.133); 
+            
             return {
                 x: Math.random() * (canvas.width - 60) + 30,
                 y: -50,
@@ -835,12 +852,19 @@
         // --- Game Loop Logic ---
         function update() {
             if (!isGameRunning) return;
+            
+            if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
+                // Double check for completion, in case it was missed in handleInput
+                showLevelCompleteScreen();
+                return;
+            }
 
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
 
             timeSinceLastDrop++;
-            if (timeSinceLastDrop >= dropInterval) {
+            // Only drop new icons if we haven't collected all 10 yet
+            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
                 if (levelWords.length > 0) {
                     fallingIcons.push(createWordIcon());
                 }
@@ -863,7 +887,7 @@
 
                     icon.y += icon.speed;
 
-                    // Requirement 3: Score Deduction instead of Game Over
+                    // Score Deduction instead of Game Over (Requirement 3)
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
                         // Deduct score
                         score -= 15; 
@@ -872,6 +896,7 @@
                         
                         // Remove fallen icon. The word must be collected successfully later.
                         fallingIcons.splice(i, 1);
+                        // The word is removed from the screen, but NOT counted as collected, so it can drop again later.
                         continue; 
                     }
                 }
@@ -913,9 +938,15 @@
                     ctx.fillText(icon.remainingLetters, icon.x, icon.y + icon.iconSize / 2 + 15);
                 }
             });
+            
+            // Draw collected word count
+            ctx.font = 'bold 20px Arial';
+            ctx.fillStyle = '#1a237e';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Collected: ${wordsCollected} / ${TOTAL_WORDS_TO_COLLECT}`, 10, 30);
         }
 
-        // --- Input and Utility Functions (Unchanged) ---
+        // --- Input and Utility Functions ---
         function createVirtualKeyboard() {
             const rows = [
                 "QWERTYUIOP",
@@ -973,10 +1004,8 @@
 
                         speakWord(icon.targetWord);
                         
-                        // NEW: Check for level completion (Requirement 1)
                         wordsCollected++;
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // Delay slightly to allow the destruction animation to start
                             setTimeout(showLevelCompleteScreen, 500); 
                         }
                     }
