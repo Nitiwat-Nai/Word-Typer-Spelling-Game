@@ -660,7 +660,7 @@
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
 
-        // Drop Interval in Milliseconds for each level (Original setting from v2.1/2.2, not used in v2.5 but kept for reference)
+        // Drop Interval in Milliseconds for each level (Original setting from v2.1/2.2, not used)
         const LEVEL_MS_INTERVALS = [
             350, 340, 330, 320, 310,
             300, 290, 280, 270, 260
@@ -668,9 +668,9 @@
         // Factor to convert MS to frames (1000ms / 60 FPS)
         const MS_TO_FRAME_FACTOR = 1000 / 60;
         
-        // **NEW V2.5 Rollback:** กำหนดค่าคงที่ตาม V1.3
+        // **NEW V2.6:** ปรับค่า Drop Interval เพื่อให้ดรอปทุก 5 วินาที
         const BASE_SPEED = 1.0; 
-        const BASE_DROP_INTERVAL = 40; // 40 frames/drop (ประมาณ 667ms)
+        const BASE_DROP_INTERVAL = 300; // 300 frames/drop = 5 seconds/drop (ที่ 60 FPS)
 
 
         let DANGER_ZONE_Y;
@@ -717,7 +717,7 @@
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
             usedWordsInLevel.clear();
 
-            // **NEW V2.5:** กำหนด dropInterval ให้เป็นค่าคงที่ BASE_DROP_INTERVAL (40 frames)
+            // กำหนด dropInterval ให้เป็นค่าคงที่ BASE_DROP_INTERVAL (300 frames = 5s)
             dropInterval = BASE_DROP_INTERVAL;
             
             score = 0;
@@ -833,7 +833,7 @@
             const wordData = availableWords[Math.floor(Math.random() * availableWords.length)];
             usedWordsInLevel.add(wordData.word);
 
-            // **NEW V2.5:** กลับไปใช้ Falling Speed คงที่ BASE_SPEED (1.0)
+            // ใช้ Falling Speed คงที่ BASE_SPEED (1.0)
             const baseSpeed = BASE_SPEED;
 
             return {
