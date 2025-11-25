@@ -70,6 +70,8 @@
             -webkit-text-fill-color: transparent;
             animation: gradientShift 3s ease infinite;
             z-index: 10;
+            cursor: pointer;
+            /* Enable double click */
         }
 
         @keyframes gradientShift {
@@ -81,6 +83,23 @@
 
             50% {
                 background-position: 100% 50%;
+            }
+        }
+
+        /* NEW: Auto Play Beat Animation */
+        .auto-play-active {
+            animation: gradientShift 3s ease infinite, beat 0.5s infinite alternate !important;
+        }
+
+        @keyframes beat {
+            from {
+                transform: scale(1.0);
+                opacity: 0.9;
+            }
+
+            to {
+                transform: scale(1.02);
+                opacity: 1;
             }
         }
 
@@ -222,17 +241,20 @@
             cursor: pointer;
             border-radius: 12px;
             user-select: none;
-            transition: all 0.2s;
+            transition: all 0.1s;
+            /* Faster transition for active state */
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             min-width: 35px;
             flex: 1;
             max-width: 55px;
         }
 
-        .key-button:active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            transform: scale(0.9);
+        .key-button:active,
+        .key-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            transform: scale(1.1) !important;
+            /* Zoom effect */
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
@@ -252,6 +274,7 @@
             z-index: 100;
             padding: 20px;
             text-align: center;
+            overflow-y: auto;
         }
 
         #menuTitle {
@@ -281,14 +304,14 @@
             font-weight: 900;
             color: #feca57;
             text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         #levelCompleteScreen #finalScore {
             font-size: clamp(20px, 5vw, 32px);
             font-weight: 800;
             color: #ffffff;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .menu-btn {
@@ -401,6 +424,41 @@
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
         }
 
+        /* Word Summary Table */
+        #wordSummaryTable {
+            width: 90%;
+            max-width: 450px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #wordSummaryTable th,
+        #wordSummaryTable td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        #wordSummaryTable th {
+            background: #3a7bd5;
+            color: white;
+            font-size: clamp(14px, 3.5vw, 18px);
+        }
+
+        #wordSummaryTable td {
+            font-size: clamp(12px, 3vw, 16px);
+            color: #333;
+        }
+
+        #wordSummaryTable tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+
         @media (max-width: 400px) {
             #levelButtonsContainer {
                 grid-template-columns: repeat(5, 1fr);
@@ -466,6 +524,7 @@
         <div id="levelCompleteScreen" style="display: none;">
             <div id="completeMessage">Level X Complete!</div>
             <div id="finalScore">Score: 0</div>
+            <table id="wordSummaryTable"></table>
             <button id="nextLevelBtn" class="menu-btn">เลเวลถัดไป 🚀</button>
             <button id="returnToMenuBtn" class="menu-btn">กลับหน้าหลัก</button>
         </div>
@@ -490,24 +549,25 @@
         const countdownOverlay = document.getElementById('countdownOverlay');
         const countdownNumber = document.getElementById('countdownNumber');
 
+        const gameTitle = document.getElementById('gameTitle'); // For Auto Play Toggle
         const levelCompleteScreen = document.getElementById('levelCompleteScreen');
         const completeMessage = document.getElementById('completeMessage');
         const finalScoreDisplay = document.getElementById('finalScore');
         const nextLevelBtn = document.getElementById('nextLevelBtn');
         const returnToMenuBtnComplete = document.getElementById('returnToMenuBtn');
+        const wordSummaryTable = document.getElementById('wordSummaryTable');
 
         let gameLoopId;
 
-        // --- Sound Logic (New) ---
+        // --- Game State Vars ---
+        let isAutoPlayMode = false;
+        let autoPlayTimerId = null;
+        let botCurrentWordIndex = 0;
+        let botCurrentCharIndex = 0;
+
+        // --- Sound Logic ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        /**
-         * Plays a simple sound effect using the Web Audio API.
-         * @param {number} frequency - Base frequency (Hz).
-         * @param {number} duration - Duration of the sound (seconds).
-         * @param {string} type - Oscillator type ('sine', 'square', 'sawtooth', 'triangle').
-         * @param {number} gain - Volume (0.0 to 1.0).
-         */
+
         function playSound(frequency, duration, type, gain = 0.5) {
             if (!audioContext) return;
 
@@ -518,7 +578,6 @@
             oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
             gainNode.gain.setValueAtTime(gain, audioContext.currentTime);
 
-            // Simple decay (Attack/Decay envelope)
             gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
 
             oscillator.connect(gainNode);
@@ -540,7 +599,6 @@
             canvas.height = window.innerHeight - totalFixedElementsHeight;
 
             if (isGameRunning || menuScreen.style.display === 'none') {
-                // Adjust Danger Zone when resizing in game mode
                 DANGER_ZONE_Y = canvas.height - 60;
             }
         }
@@ -550,8 +608,7 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // --- Word Data ---
-        // L1 & L2: 3-4 letters
+        // --- Word Data (Defined outside for global access) ---
         const LEVEL_1_WORDS = [
             { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
             { icon: '🐱', word: 'CAT', meaning: 'แมว' },
@@ -577,8 +634,7 @@
             { icon: '🧼', word: 'SOAP', meaning: 'สบู่' },
             { icon: '🗄️', word: 'DESK', meaning: 'โต๊ะทำงาน' },
         ];
-
-        // L3 & L4: 4-5 letters
+        
         const LEVEL_3_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
             { icon: '🌟', word: 'STAR', meaning: 'ดาว' },
@@ -605,7 +661,6 @@
             { icon: '🦶', word: 'FOOT', meaning: 'เท้า' },
         ];
 
-        // L5 - L8: 5-6 letters
         const LEVEL_5_WORDS = [
             { icon: '👑', word: 'CROWN', meaning: 'มงกุฎ' },
             { icon: '🌊', word: 'OCEAN', meaning: 'มหาสมุทร' },
@@ -658,7 +713,6 @@
             { icon: '🛣️', word: 'HIGHWAY', meaning: 'ทางด่วน' },
         ];
 
-        // L9 & L10: 6-8 letters
         const LEVEL_9_WORDS = [
             { icon: '🎈', word: 'BALLOON', meaning: 'ลูกโป่ง' },
             { icon: '🐘', word: 'ELEPHANT', meaning: 'ช้าง' },
@@ -690,12 +744,12 @@
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
 
-        // --- Game Constants (V2.6 Drop Logic) ---
-        const BASE_SPEED = 1.0; 
-        const BASE_DROP_INTERVAL = 300; // 300 frames/drop = 5 seconds/drop (at 60 FPS)
+        const BASE_SPEED = 1.0;
+        const BASE_DROP_INTERVAL = 300; // 5 seconds/drop (at 60 FPS)
 
         let DANGER_ZONE_Y;
         let usedWordsInLevel = new Set();
+        let currentLevelWordData = []; // Store full word data for summary
 
         let score = 0;
         let startTime = 0;
@@ -711,6 +765,89 @@
         let levelWords = [];
         let wordsCollected = 0;
 
+        // --- Auto Play Logic ---
+
+        function toggleAutoPlay() {
+            isAutoPlayMode = !isAutoPlayMode;
+            if (isAutoPlayMode) {
+                gameTitle.classList.add('auto-play-active');
+                console.log("Auto Play Mode: ON");
+            } else {
+                gameTitle.classList.remove('auto-play-active');
+                console.log("Auto Play Mode: OFF");
+            }
+        }
+
+        // Event listener for double click/tap on title
+        gameTitle.addEventListener('dblclick', toggleAutoPlay);
+        
+        // Mobile double tap detection (for touchscreens)
+        let lastTap = 0;
+        gameTitle.addEventListener('touchend', function(event) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 50) {
+                toggleAutoPlay();
+                event.preventDefault(); 
+            }
+            lastTap = currentTime;
+        });
+
+        function startAutoPlay() {
+            if (!isAutoPlayMode || !isGameRunning) return;
+
+            if (autoPlayTimerId) clearInterval(autoPlayTimerId);
+            botCurrentWordIndex = 0;
+            botCurrentCharIndex = 0;
+
+            // Wait 1 second after first icon drops (or countdown finishes)
+            setTimeout(processNextWordForBot, 1000); 
+        }
+
+        function processNextWordForBot() {
+            if (!isAutoPlayMode || !isGameRunning) return;
+
+            if (botCurrentWordIndex >= TOTAL_WORDS_TO_COLLECT) {
+                // All words expected to be collected, bot finishes
+                return;
+            }
+
+            const targetWordData = levelWords[botCurrentWordIndex];
+            if (!targetWordData) return;
+
+            const targetWord = targetWordData.word.toUpperCase();
+            botCurrentCharIndex = 0;
+
+            // Start typing characters with 0.3s interval
+            autoPlayTimerId = setInterval(() => {
+                if (!isGameRunning) {
+                    clearInterval(autoPlayTimerId);
+                    return;
+                }
+
+                if (botCurrentCharIndex < targetWord.length) {
+                    const char = targetWord[botCurrentCharIndex];
+                    handleInput(char); 
+                    botCurrentCharIndex++;
+                } else {
+                    // Word completed
+                    clearInterval(autoPlayTimerId);
+                    botCurrentWordIndex++;
+
+                    // Wait 0.5s before processing the next word
+                    setTimeout(processNextWordForBot, 500); 
+                }
+            }, 300); // 0.3 second interval for characters
+        }
+
+
+        function stopAutoPlay() {
+            if (autoPlayTimerId) {
+                clearInterval(autoPlayTimerId);
+                autoPlayTimerId = null;
+            }
+        }
+
         // --- Game Flow Functions ---
 
         function generateLevels() {
@@ -720,7 +857,6 @@
             for (let i = 0; i < 10; i++) {
                 const button = document.createElement('button');
                 button.className = 'level-button';
-                // Display word length range for clarity
                 let range;
                 if (i < 2) range = '3-4';
                 else if (i < 4) range = '4-5';
@@ -735,7 +871,9 @@
 
         async function startGame(levelIndex) {
             currentLevel = levelIndex;
-            levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
+            // Store the full word data for summary later, shuffled
+            currentLevelWordData = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5); 
+            levelWords = currentLevelWordData;
             usedWordsInLevel.clear();
 
             dropInterval = BASE_DROP_INTERVAL;
@@ -746,6 +884,7 @@
             wordsCollected = 0;
             scoreDisplay.textContent = score;
             currentInputDisplay.textContent = 'รอพิมพ์...';
+            stopAutoPlay(); // Stop bot if running
 
             menuScreen.style.display = 'none';
             levelCompleteScreen.style.display = 'none';
@@ -759,18 +898,41 @@
 
             await showCountdown();
 
-            // ใช้การหน่วงเวลาเริ่มต้นแบบสุ่ม เพื่อกระจายการดรอปไอคอนคำแรก ๆ 
-            timeSinceLastDrop = Math.floor(Math.random() * dropInterval * 0.5);
+            // 1. NEW: Delay 1 second after countdown before dropping the first icon
+            setTimeout(() => {
+                // 2. Initial drop time: 0, so the first icon drops immediately after the 1s delay
+                timeSinceLastDrop = dropInterval; 
+                isGameRunning = true;
+                if (!gameLoopId) {
+                    gameLoop();
+                }
 
-            isGameRunning = true;
-            if (!gameLoopId) {
-                gameLoop();
-            }
+                // Start bot logic if in Auto Play Mode
+                startAutoPlay();
+            }, 1000); 
+        }
+
+        function createWordSummaryTable() {
+            wordSummaryTable.innerHTML = '';
+            let tableHTML = '<tr><th>#</th><th>Word (คำศัพท์)</th><th>Meaning (คำแปล)</th></tr>';
+
+            currentLevelWordData.forEach((data, index) => {
+                tableHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${data.word}</td>
+                        <td>${data.meaning}</td>
+                    </tr>
+                `;
+            });
+
+            wordSummaryTable.innerHTML = tableHTML;
         }
 
         function showLevelCompleteScreen() {
             isGameRunning = false;
             fallingIcons.length = 0;
+            stopAutoPlay(); // Stop bot
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -781,6 +943,7 @@
 
             completeMessage.textContent = `Level ${currentLevel + 1} Complete! 🎉`;
             finalScoreDisplay.textContent = `Final Score: ${score}`;
+            createWordSummaryTable(); // Show summary
 
             if (currentLevel < ALL_LEVEL_WORDS.length - 1) {
                 nextLevelBtn.style.display = 'block';
@@ -824,6 +987,7 @@
         function returnToMenu() {
             isGameRunning = false;
             fallingIcons.length = 0;
+            stopAutoPlay(); // Stop bot
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -833,22 +997,21 @@
             menuScreen.style.display = 'flex';
         }
 
-        // --- IMPORTANT: Modified speakWord function for reading word, not spelling ---
+        // Disabled speakWord to meet the final requirement (no speech after level end)
         function speakWord(word) {
+            /* Speech synthesis is disabled for final version:
             if ('speechSynthesis' in window) {
-                // The utterance object will read the word as a whole word (e.g., SUN as "sun"), 
-                // not by spelling it out (S-U-N), unless the word is not recognized or the language is wrong.
                 const utterance = new SpeechSynthesisUtterance(word);
-                utterance.lang = 'en-US'; 
+                utterance.lang = 'en-US';
                 window.speechSynthesis.speak(utterance);
             }
+            */
         }
 
         function createWordIcon() {
             let availableWords = levelWords.filter(w => !usedWordsInLevel.has(w.word));
 
             if (availableWords.length === 0) {
-                // If all 10 unique words are currently in use 
                 usedWordsInLevel.clear();
                 availableWords = levelWords;
             }
@@ -856,7 +1019,6 @@
             const wordData = availableWords[Math.floor(Math.random() * availableWords.length)];
             usedWordsInLevel.add(wordData.word);
 
-            // ใช้ Falling Speed คงที่ BASE_SPEED (1.0)
             const baseSpeed = BASE_SPEED;
 
             return {
@@ -885,7 +1047,7 @@
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
             
-            // ใช้ตรรกะการดรอปตามเวลา (5 วินาทีต่อไอคอน)
+            // 5 second drop logic (300 frames)
             timeSinceLastDrop++;
             
             if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
@@ -905,7 +1067,6 @@
                         fallingIcons.splice(i, 1);
                     }
                 } else {
-                    // ปรับความเร็วเมื่อเหลือตัวอักษรน้อยลง
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
                         icon.speed = icon.baseSpeed * 1.2;
                     }
@@ -914,15 +1075,12 @@
 
                     // Score Deduction 
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
-                        // Play Fail Sound: Low-pitched short beep
                         playSound(150, 0.15, 'sine', 0.8); 
 
-                        // Deduct score
                         score -= 15;
                         if (score < 0) score = 0;
                         scoreDisplay.textContent = score;
 
-                        // Remove fallen icon.
                         fallingIcons.splice(i, 1);
                         continue;
                     }
@@ -993,6 +1151,7 @@
                     const key = rowKeys[i];
                     const button = document.createElement('button');
                     button.className = 'key-button';
+                    button.id = `key-${key}`; // Add ID for bot to target
                     button.textContent = key;
                     button.onclick = () => handleInput(key);
                     rowDiv.appendChild(button);
@@ -1003,7 +1162,6 @@
 
         document.addEventListener('keydown', (e) => {
             if (isGameRunning) {
-                // Ensure audio context is resumed on first user interaction if needed
                 if (audioContext.state === 'suspended') {
                     audioContext.resume();
                 }
@@ -1011,10 +1169,23 @@
             }
         });
 
+        function applyKeyEffect(key, duration = 100) {
+            const keyButton = document.getElementById(`key-${key}`);
+            if (keyButton) {
+                keyButton.classList.add('key-active');
+                setTimeout(() => {
+                    keyButton.classList.remove('key-active');
+                }, duration);
+            }
+        }
+
         function handleInput(typedKey) {
             if (!isGameRunning || typedKey.length !== 1 || typedKey < 'A' || typedKey > 'Z') {
                 return;
             }
+
+            // Apply visual effect immediately
+            applyKeyEffect(typedKey);
 
             let foundMatch = false;
 
@@ -1026,25 +1197,25 @@
 
                 if (matchIndex !== -1) {
                     foundMatch = true;
-                    // Play Success Sound: High-pitched short tone
+                    
                     playSound(600, 0.08, 'square', 0.6); 
 
                     icon.remainingLetters = icon.remainingLetters.slice(0, matchIndex) +
                         icon.remainingLetters.slice(matchIndex + 1);
 
                     if (icon.remainingLetters.length === 0) {
-                        // Play Destroy Sound: Medium-low pitched tone
                         playSound(300, 0.2, 'sine', 0.7); 
 
                         score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10);
                         scoreDisplay.textContent = score;
                         icon.isDestroying = true;
 
-                        // Speak the completed word (e.g., "SUN" is read as "sun")
                         speakWord(icon.targetWord);
 
                         wordsCollected++;
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
+                            // Ensure bot stops if the game ends early (e.g., due to fast typing)
+                            stopAutoPlay();
                             setTimeout(showLevelCompleteScreen, 500);
                         }
                     }
@@ -1056,7 +1227,6 @@
             }
 
             if (!foundMatch) {
-                // Play Fail Sound: Low-pitched short beep
                 playSound(150, 0.15, 'sine', 0.8); 
                 
                 currentInputDisplay.textContent = typedKey;
