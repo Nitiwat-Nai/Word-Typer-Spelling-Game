@@ -1105,41 +1105,48 @@
             };
         }
 
-        // --- Game Loop Logic ---
+        // --- Game Loop Logic (V4.5 Fixed) ---
         function update() {
-            // Only run if the game is active 
-            if (!isGameRunning) return;
-
-            runningTime = Date.now() - startTime;
-            timeDisplay.textContent = formatTime(runningTime);
-            
-            timeSinceLastDrop++;
-            
-            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
-                if (levelWords.length > 0) {
-                    fallingIcons.push(createWordIcon());
+            // 1. Game State Updates (Time, Score, Drops) - ONLY IF isGameRunning
+            if (isGameRunning) {
+                runningTime = Date.now() - startTime;
+                timeDisplay.textContent = formatTime(runningTime);
+                
+                timeSinceLastDrop++;
+                
+                if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
+                    if (levelWords.length > 0) {
+                        fallingIcons.push(createWordIcon());
+                    }
+                    timeSinceLastDrop = 0;
                 }
-                timeSinceLastDrop = 0;
+
+                // Bot Trigger Logic - ONLY IF isGameRunning
+                if (isAutoPlayMode && isWaitingForNextIcon) {
+                    processNextWordForBot(); 
+                }
             }
             
-            
+            // 2. Icon Movement, Destruction, and Cleanup - ALWAYS RUNS
             for (let i = fallingIcons.length - 1; i >= 0; i--) {
                 const icon = fallingIcons[i];
 
                 if (icon.isDestroying) {
+                    // Destruction logic (MUST RUN for animation)
                     icon.destroyScale += 0.1;
                     icon.iconSize += 2;
                     if (icon.destroyScale > 2) {
                         fallingIcons.splice(i, 1);
                     }
-                } else {
+                } else if (isGameRunning) { 
+                    // Movement and danger zone logic (ONLY IF isGameRunning, not destroying)
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
                         icon.speed = icon.baseSpeed * 1.2;
                     }
 
                     icon.y += icon.speed;
 
-                    // Score Deduction 
+                    // Score Deduction (Game Over condition for this icon)
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
                         playSound(150, 0.15, 'sine', 0.8); 
 
@@ -1153,16 +1160,9 @@
                             stopAutoPlay();
                             isWaitingForNextIcon = true;
                         }
-
                         continue;
                     }
                 }
-            }
-
-            // --- Corrected Bot Trigger Logic ---
-            // Only attempt to trigger bot if game is running
-            if (isGameRunning && isAutoPlayMode && isWaitingForNextIcon) {
-                 processNextWordForBot(); 
             }
         }
 
@@ -1259,6 +1259,7 @@
         }
 
         function handleInput(typedKey) {
+            // Prevent new input if game is not running (i.e. we are in the 2s transition period)
             if (!isGameRunning && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
                 return;
             }
@@ -1290,7 +1291,7 @@
 
                         score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10);
                         scoreDisplay.textContent = score;
-                        icon.isDestroying = true;
+                        icon.isDestroying = true; // Start the destruction animation
 
                         // Speak the word immediately
                         speakWord(icon.targetWord);
@@ -1304,11 +1305,11 @@
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // NEW LOGIC: Stop game immediately and use a 2 second timeout for transition
+                            // Stop game logic immediately (but allow update/draw loops to continue running animation)
                             isGameRunning = false; 
                             stopAutoPlay(); 
                             
-                            // Delay 2 seconds to allow the final word's speech to play
+                            // Delay 2 seconds to allow the final word's speech AND animation to finish
                             setTimeout(() => { 
                                 showLevelCompleteScreen();
                             }, 2000); 
@@ -1321,7 +1322,7 @@
                 }
             }
 
-            if (!foundMatch) {
+            if (!foundMatch && isGameRunning) { // Only show error if game is running normally
                 playSound(150, 0.15, 'sine', 0.8); 
                 
                 currentInputDisplay.textContent = typedKey;
