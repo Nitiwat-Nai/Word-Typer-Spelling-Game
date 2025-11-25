@@ -568,10 +568,11 @@
 
         // --- Game State Vars ---
         let isAutoPlayMode = false;
-        let autoPlayTimerId = null; // Stores setTimeout for 1s delay before typing
-        let botTypingIntervalId = null; // Stores setInterval for 0.5s char delay
+        let autoPlayTimerId = null; 
+        let botTypingIntervalId = null; 
         let botCurrentCharIndex = 0;
-        let isWaitingForNextIcon = false; // Bot flag to wait for icon drop
+        let isWaitingForNextIcon = false; 
+        let botCurrentTarget = null; // NEW: The specific icon object the bot is currently typing/waiting for
 
         // --- Sound Logic ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -615,7 +616,7 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // --- Word Data (Reduced for brevity, assumed full data is present) ---
+        // --- Word Data (Same as previous) ---
         const LEVEL_1_WORDS = [
             { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
             { icon: '🐱', word: 'CAT', meaning: 'แมว' },
@@ -782,19 +783,26 @@
         gameTitle.addEventListener('touchend', function(event) {
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
-            if (tapLength < 500 && tapLength > 50) {
+            // Check if it's a double tap (within 500ms)
+            if (tapLength < 500 && tapLength > 50) { 
                 toggleAutoPlay();
                 event.preventDefault(); 
             }
             lastTap = currentTime;
         });
 
+        // NEW: Function to find the active target for the bot
+        function findBotTarget() {
+            // Find the first icon that is NOT in the process of being destroyed
+            return fallingIcons.find(icon => !icon.isDestroying); 
+        }
+
         function startAutoPlay() {
             stopAutoPlay();
             if (!isAutoPlayMode || !isGameRunning) return;
 
-            // Start by waiting for the first icon to appear
-            isWaitingForNextIcon = true;
+            // Start by waiting for the first non-destroying icon to appear
+            isWaitingForNextIcon = true; 
         }
 
         function stopAutoPlay() {
@@ -803,22 +811,31 @@
             autoPlayTimerId = null;
             botTypingIntervalId = null;
             botCurrentCharIndex = 0;
-            isWaitingForNextIcon = false;
+            botCurrentTarget = null; // Clear the target
+            // isWaitingForNextIcon is often set to true when stop is called to prepare for the next word
         }
 
         /**
-         * Core function to handle the delayed typing for the current word (fallingIcons[0]).
+         * Core function to handle the delayed typing for the current word.
          */
         function processNextWordForBot() {
-            if (!isAutoPlayMode || !isGameRunning || fallingIcons.length === 0) return;
+            const targetIcon = findBotTarget();
+
+            // Guard: If no valid target is found, or mode is off, reset state and wait.
+            if (!isAutoPlayMode || !isGameRunning || !targetIcon) {
+                stopAutoPlay();
+                isWaitingForNextIcon = true; // Ensure it keeps trying 
+                return; 
+            }
             
-            // Prevent re-triggering while a process is already underway
+            // Guard: Prevent re-triggering if a process is already underway
             if (autoPlayTimerId !== null || botTypingIntervalId !== null) return;
 
-            isWaitingForNextIcon = false; // Stop waiting since we found an icon
+            // Set the target and start the process
+            botCurrentTarget = targetIcon;
+            isWaitingForNextIcon = false; 
 
-            const targetIcon = fallingIcons[0]; 
-            const targetWord = targetIcon.targetWord;
+            const targetWord = botCurrentTarget.targetWord;
             botCurrentCharIndex = 0;
             
             console.log(`Bot is targeting: ${targetWord}`);
@@ -828,9 +845,10 @@
                 
                 // Start typing characters with 0.5s interval (Requirement 1)
                 botTypingIntervalId = setInterval(() => {
-                    if (!isGameRunning || fallingIcons.length === 0 || fallingIcons[0] !== targetIcon) {
-                        // Safety check: if the game ends or the target icon is somehow replaced
+                    // Robust check: If game ends, or target is destroyed (by external force), exit.
+                    if (!isGameRunning || botCurrentTarget.isDestroying) { 
                         stopAutoPlay();
+                        isWaitingForNextIcon = true; 
                         return;
                     }
 
@@ -839,16 +857,14 @@
                         handleInput(char); 
                         botCurrentCharIndex++;
                     } else {
-                        // Word completed by bot typing
+                        // This block should ideally not be hit if handleInput works, but as safety:
                         clearInterval(botTypingIntervalId);
                         botTypingIntervalId = null;
-                        
-                        // Set flag to wait for the next icon to drop before restarting the process
                         isWaitingForNextIcon = true; 
-                        console.log("Bot finished word, waiting for next icon.");
+                        console.log("Bot finished word (safety exit), waiting for next icon.");
                     }
                 }, 500); // 0.5 second interval for characters
-                autoPlayTimerId = null; // Clear the timeout ID
+                autoPlayTimerId = null; // Clear the timeout ID now that interval has started
             }, 1000); // 1 second delay before starting to type
         }
 
@@ -867,7 +883,7 @@
                 else if (i < 8) range = '5-6';
                 else range = '6-8';
 
-                // Use innerHTML and <br> for multiline display (Requirement 3)
+                // Use innerHTML and <br> for multiline display
                 button.innerHTML = `L${i + 1} <br> (${range})`; 
                 button.onclick = () => startGame(i);
                 levelButtonsContainer.appendChild(button);
@@ -1060,14 +1076,6 @@
                     icon.iconSize += 2;
                     if (icon.destroyScale > 2) {
                         fallingIcons.splice(i, 1);
-
-                        // If the bot was waiting for the next icon after destroying one, 
-                        // and the list is not empty, set the flag to re-trigger the bot logic.
-                        if (isAutoPlayMode && isWaitingForNextIcon && fallingIcons.length > 0) {
-                            // This ensures the bot immediately attempts to start the 1s delay 
-                            // for the new word (fallingIcons[0]) in the next update loop.
-                            processNextWordForBot();
-                        }
                     }
                 } else {
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
@@ -1085,7 +1093,7 @@
                         scoreDisplay.textContent = score;
 
                         fallingIcons.splice(i, 1);
-                        // If an icon is missed, the bot should try to target the new fallingIcons[0]
+                        // If an icon is missed, the bot should try to target the new first icon
                         if (isAutoPlayMode && fallingIcons.length > 0) {
                             stopAutoPlay();
                             isWaitingForNextIcon = true;
@@ -1097,10 +1105,9 @@
             }
 
             // --- Corrected Bot Trigger Logic ---
-            if (isAutoPlayMode && isWaitingForNextIcon && fallingIcons.length > 0) {
-                 // Bot attempts to process the word if the previous one is done/missed 
-                 // and the game is running.
-                 processNextWordForBot();
+            // If the bot is waiting, try to process the next word.
+            if (isAutoPlayMode && isWaitingForNextIcon) {
+                 processNextWordForBot(); 
             }
         }
 
@@ -1229,10 +1236,10 @@
 
                         wordsCollected++;
                         
-                        // NEW: If word is completed and Auto Play is on, stop the typing process and wait for the next icon
+                        // If word is completed and Auto Play is on, stop the typing process and wait for the next icon
                         if (isAutoPlayMode) { 
-                            stopAutoPlay(); // Clear intervals/timeouts immediately
-                            isWaitingForNextIcon = true; // Set flag to trigger for the next word in the next update()
+                            stopAutoPlay(); 
+                            isWaitingForNextIcon = true; 
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
