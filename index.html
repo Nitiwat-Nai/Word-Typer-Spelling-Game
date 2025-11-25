@@ -498,6 +498,36 @@
 
         let gameLoopId;
 
+        // --- Sound Logic (New) ---
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        /**
+         * Plays a simple sound effect using the Web Audio API.
+         * @param {number} frequency - Base frequency (Hz).
+         * @param {number} duration - Duration of the sound (seconds).
+         * @param {string} type - Oscillator type ('sine', 'square', 'sawtooth', 'triangle').
+         * @param {number} gain - Volume (0.0 to 1.0).
+         */
+        function playSound(frequency, duration, type, gain = 0.5) {
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(gain, audioContext.currentTime);
+
+            // Simple decay (Attack/Decay envelope)
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
         // --- Canvas & Resize Logic ---
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
@@ -520,7 +550,7 @@
             setTimeout(resizeCanvas, 100);
         });
 
-        // --- Word Data (v2.1: New Length Constraints) ---
+        // --- Word Data ---
         // L1 & L2: 3-4 letters
         const LEVEL_1_WORDS = [
             { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
@@ -660,18 +690,9 @@
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
 
-        // Drop Interval in Milliseconds for each level (Original setting from v2.1/2.2, not used)
-        const LEVEL_MS_INTERVALS = [
-            350, 340, 330, 320, 310,
-            300, 290, 280, 270, 260
-        ];
-        // Factor to convert MS to frames (1000ms / 60 FPS)
-        const MS_TO_FRAME_FACTOR = 1000 / 60;
-        
-        // **NEW V2.6:** ปรับค่า Drop Interval เพื่อให้ดรอปทุก 5 วินาที
+        // --- Game Constants (V2.6 Drop Logic) ---
         const BASE_SPEED = 1.0; 
-        const BASE_DROP_INTERVAL = 300; // 300 frames/drop = 5 seconds/drop (ที่ 60 FPS)
-
+        const BASE_DROP_INTERVAL = 300; // 300 frames/drop = 5 seconds/drop (at 60 FPS)
 
         let DANGER_ZONE_Y;
         let usedWordsInLevel = new Set();
@@ -717,7 +738,6 @@
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
             usedWordsInLevel.clear();
 
-            // กำหนด dropInterval ให้เป็นค่าคงที่ BASE_DROP_INTERVAL (300 frames = 5s)
             dropInterval = BASE_DROP_INTERVAL;
             
             score = 0;
@@ -813,10 +833,13 @@
             menuScreen.style.display = 'flex';
         }
 
+        // --- IMPORTANT: Modified speakWord function for reading word, not spelling ---
         function speakWord(word) {
             if ('speechSynthesis' in window) {
+                // The utterance object will read the word as a whole word (e.g., SUN as "sun"), 
+                // not by spelling it out (S-U-N), unless the word is not recognized or the language is wrong.
                 const utterance = new SpeechSynthesisUtterance(word);
-                utterance.lang = 'en-US';
+                utterance.lang = 'en-US'; 
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -855,7 +878,6 @@
             if (!isGameRunning) return;
 
             if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                // Double check for completion, in case it was missed in handleInput
                 showLevelCompleteScreen();
                 return;
             }
@@ -863,7 +885,7 @@
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
             
-            // ใช้ตรรกะการดรอปตามเวลา
+            // ใช้ตรรกะการดรอปตามเวลา (5 วินาทีต่อไอคอน)
             timeSinceLastDrop++;
             
             if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
@@ -883,7 +905,7 @@
                         fallingIcons.splice(i, 1);
                     }
                 } else {
-                    // ปรับความเร็วเมื่อเหลือตัวอักษรน้อยลง (ยังคงใช้ตรรกะนี้ไว้)
+                    // ปรับความเร็วเมื่อเหลือตัวอักษรน้อยลง
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
                         icon.speed = icon.baseSpeed * 1.2;
                     }
@@ -892,14 +914,16 @@
 
                     // Score Deduction 
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
+                        // Play Fail Sound: Low-pitched short beep
+                        playSound(150, 0.15, 'sine', 0.8); 
+
                         // Deduct score
                         score -= 15;
                         if (score < 0) score = 0;
                         scoreDisplay.textContent = score;
 
-                        // Remove fallen icon. The word must be collected successfully later.
+                        // Remove fallen icon.
                         fallingIcons.splice(i, 1);
-                        // The word is removed from the screen, but NOT counted as collected, so it can drop again later.
                         continue;
                     }
                 }
@@ -911,6 +935,7 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Draw Danger Zone
             ctx.strokeStyle = '#ff4757';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -918,6 +943,7 @@
             ctx.lineTo(canvas.width, DANGER_ZONE_Y);
             ctx.stroke();
 
+            // Flashing effect for Danger Zone
             if (Math.floor(runningTime / 150) % 2 === 0) {
                 ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
                 ctx.fillRect(0, DANGER_ZONE_Y - 5, canvas.width, 10);
@@ -977,6 +1003,10 @@
 
         document.addEventListener('keydown', (e) => {
             if (isGameRunning) {
+                // Ensure audio context is resumed on first user interaction if needed
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
                 handleInput(e.key.toUpperCase());
             }
         });
@@ -996,15 +1026,21 @@
 
                 if (matchIndex !== -1) {
                     foundMatch = true;
+                    // Play Success Sound: High-pitched short tone
+                    playSound(600, 0.08, 'square', 0.6); 
 
                     icon.remainingLetters = icon.remainingLetters.slice(0, matchIndex) +
                         icon.remainingLetters.slice(matchIndex + 1);
 
                     if (icon.remainingLetters.length === 0) {
+                        // Play Destroy Sound: Medium-low pitched tone
+                        playSound(300, 0.2, 'sine', 0.7); 
+
                         score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10);
                         scoreDisplay.textContent = score;
                         icon.isDestroying = true;
 
+                        // Speak the completed word (e.g., "SUN" is read as "sun")
                         speakWord(icon.targetWord);
 
                         wordsCollected++;
@@ -1020,6 +1056,9 @@
             }
 
             if (!foundMatch) {
+                // Play Fail Sound: Low-pitched short beep
+                playSound(150, 0.15, 'sine', 0.8); 
+                
                 currentInputDisplay.textContent = typedKey;
                 currentInputDisplay.classList.add('typed-error');
                 setTimeout(() => {
