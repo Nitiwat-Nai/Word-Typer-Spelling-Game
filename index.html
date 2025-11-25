@@ -577,13 +577,11 @@
         // --- Speech Synthesis Logic ---
         const synth = window.speechSynthesis;
         let speechQueue = [];
+        
+        // NEW GLOBAL: Callback to run when the last queued speech finishes
+        let levelCompleteCallback = null; 
 
-        // Function to check if speech is active
-        function isSpeechSynthesisActive() {
-            // Check if the synthesizer is speaking or if there are items in the custom queue waiting.
-            return synth.speaking || speechQueue.length > 0;
-        }
-
+        // Function to handle sequential speaking and transition callback
         function speakWord(word) {
             if (!synth) return null;
 
@@ -598,14 +596,25 @@
             utterance.pitch = 1.0; 
             utterance.rate = 0.8; 
 
-            // Handle queue
             speechQueue.push(utterance);
             
+            // CRITICAL: Single comprehensive onend handler
             utterance.onend = () => {
-                // This will run when the *current* utterance finishes
-                speechQueue.shift(); // Remove the finished utterance
-                if (speechQueue.length > 0) {
-                    synth.speak(speechQueue[0]); // Start the next one in the queue
+                speechQueue.shift(); // 1. Remove the finished utterance
+
+                // 2. Check if the level is complete and this was the last word's speech
+                if (levelCompleteCallback) {
+                    const tempCallback = levelCompleteCallback;
+                    levelCompleteCallback = null; // Clear it immediately
+                    
+                    // Delay slightly to ensure destruction animation starts/finishes
+                    setTimeout(() => { 
+                         tempCallback(); 
+                    }, 300); 
+
+                } else if (speechQueue.length > 0) {
+                    // 3. Normal queue processing: Start the next one
+                    synth.speak(speechQueue[0]); 
                 }
             };
             
@@ -613,7 +622,7 @@
             if (speechQueue.length === 1 && !synth.speaking) {
                 synth.speak(utterance);
             }
-            return utterance; // Return the utterance object for potential onend customization
+            return utterance; // Return the utterance object
         }
 
         // --- Sound Logic ---
@@ -958,9 +967,10 @@
             currentInputDisplay.textContent = 'รอพิมพ์...';
             stopAutoPlay(); 
             
-            // Clear speech queue
+            // Clear speech queue and completion flag
             if (synth) synth.cancel();
             speechQueue.length = 0;
+            levelCompleteCallback = null; // Ensure this is clean
 
 
             menuScreen.style.display = 'none';
@@ -1006,11 +1016,13 @@
         }
 
         function showLevelCompleteScreen() {
+            // This function is now only called via the audio callback after the last word
             isGameRunning = false;
             fallingIcons.length = 0;
             stopAutoPlay(); 
             if (synth) synth.cancel();
             speechQueue.length = 0;
+            levelCompleteCallback = null; // Clean up just in case
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -1068,6 +1080,7 @@
             stopAutoPlay(); 
             if (synth) synth.cancel();
             speechQueue.length = 0;
+            levelCompleteCallback = null; // Clean up
 
             canvas.style.display = 'none';
             topBar.style.display = 'none';
@@ -1106,6 +1119,9 @@
 
         // --- Game Loop Logic ---
         function update() {
+            // Only run if the game is active (or if waiting for completion callback)
+            if (!isGameRunning && !levelCompleteCallback) return;
+
             // Only update game state (movement, drops) if game is running
             if (isGameRunning) {
                 runningTime = Date.now() - startTime;
@@ -1260,10 +1276,14 @@
         }
 
         function handleInput(typedKey) {
-            // Allow input only if the game is running OR if wordsCollected is TOTAL-1 (to finish the last word)
-            if (!isGameRunning && wordsCollected < TOTAL_WORDS_TO_COLLECT - 1) {
-                return;
+            // Allow input only if the game is running OR if we are processing the last word (wordsCollected == TOTAL_WORDS_TO_COLLECT - 1)
+            // Note: Since wordsCollected is checked *after* increment, we only need to check isGameRunning for normal input
+            if (!isGameRunning && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
+                 // But we must allow the last key of the last word to pass through.
+                 // We don't need this complex check if we ensure isGameRunning is only false at the end.
+                 // Let's rely on the check inside the loop.
             }
+
 
             if (typedKey.length !== 1 || typedKey < 'A' || typedKey > 'Z') {
                 return;
@@ -1306,34 +1326,20 @@
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // 1. Stop the game logic (drops, bot) immediately
+                            // 1. Stop the game logic (drops, bot, time) immediately
                             isGameRunning = false; 
+                            stopAutoPlay(); // Stop bot just in case
 
                             const finalizeLevelTransition = () => {
-                                // 3. Wait a bit for destruction animation to start/finish before changing screen
-                                setTimeout(() => {
-                                    showLevelCompleteScreen();
-                                }, 300); 
+                                // This function is executed by the utterance.onend handler
+                                showLevelCompleteScreen();
                             };
 
                             if (utterance) {
-                                // 2. Wait for the speech to end, then call finalizeLevelTransition
-                                // Find the last utterance created (which is the one for the last word)
-                                const lastUtterance = speechQueue[speechQueue.length - 1];
-
-                                if (lastUtterance) {
-                                    // Use a temporary function to ensure both original queue logic and finalizer run
-                                    const originalOnEnd = lastUtterance.onend;
-                                    lastUtterance.onend = () => {
-                                        if (originalOnEnd) originalOnEnd(); // Run the queue logic first
-                                        finalizeLevelTransition();
-                                    };
-                                } else {
-                                    // Fallback if the final utterance was somehow lost (unlikely)
-                                    finalizeLevelTransition();
-                                }
+                                // 2. Set the global callback to be triggered when this *last* utterance finishes
+                                levelCompleteCallback = finalizeLevelTransition;
                             } else {
-                                // Fallback if speech is disabled/not supported
+                                // 2. Fallback if speech is disabled/not supported (Call immediately)
                                 finalizeLevelTransition();
                             }
                         }
