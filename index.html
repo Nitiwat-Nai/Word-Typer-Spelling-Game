@@ -489,26 +489,26 @@
         const levelButtonsContainer = document.getElementById('levelButtonsContainer');
         const countdownOverlay = document.getElementById('countdownOverlay');
         const countdownNumber = document.getElementById('countdownNumber');
-        
+
         const levelCompleteScreen = document.getElementById('levelCompleteScreen');
         const completeMessage = document.getElementById('completeMessage');
         const finalScoreDisplay = document.getElementById('finalScore');
         const nextLevelBtn = document.getElementById('nextLevelBtn');
         const returnToMenuBtnComplete = document.getElementById('returnToMenuBtn');
-        
+
         let gameLoopId;
 
         // --- Canvas & Resize Logic ---
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
-            const totalFixedElementsHeight = (document.getElementById('gameTitle')?.offsetHeight || 0) + 
-                                            (topBar.style.display !== 'none' ? topBar.offsetHeight : 0) + 
-                                            (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0) + 
-                                            (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0);
-            
+            const totalFixedElementsHeight = (document.getElementById('gameTitle')?.offsetHeight || 0) +
+                (topBar.style.display !== 'none' ? topBar.offsetHeight : 0) +
+                (inputBox.style.display !== 'none' ? inputBox.offsetHeight : 0) +
+                (virtualKeyboard.style.display !== 'none' ? virtualKeyboard.offsetHeight : 0);
+
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight - totalFixedElementsHeight;
-            
+
             if (isGameRunning || menuScreen.style.display === 'none') {
                 // Adjust Danger Zone when resizing in game mode
                 DANGER_ZONE_Y = canvas.height - 60;
@@ -521,19 +521,19 @@
         });
 
         // --- Word Data (v2.1: New Length Constraints) ---
-        
+
         // L1 & L2: 3-4 letters
         const LEVEL_1_WORDS = [
-            { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' }, 
-            { icon: '🐱', word: 'CAT', meaning: 'แมว' }, 
-            { icon: '☀️', word: 'SUN', meaning: 'พระอาทิตย์' }, 
-            { icon: '🚗', word: 'CAR', meaning: 'รถยนต์' }, 
-            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' }, 
-            { icon: '🐝', word: 'BEE', meaning: 'ผึ้ง' }, 
-            { icon: '🦋', word: 'FLY', meaning: 'แมลงวัน' }, 
-            { icon: '🐸', word: 'FROG', meaning: 'กบ' }, 
-            { icon: '💧', word: 'DROP', meaning: 'หยดน้ำ' }, 
-            { icon: '🐭', word: 'MICE', meaning: 'หนู' }, 
+            { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
+            { icon: '🐱', word: 'CAT', meaning: 'แมว' },
+            { icon: '☀️', word: 'SUN', meaning: 'พระอาทิตย์' },
+            { icon: '🚗', word: 'CAR', meaning: 'รถยนต์' },
+            { icon: '🦊', word: 'FOX', meaning: 'สุนัขจิ้งจอก' },
+            { icon: '🐝', word: 'BEE', meaning: 'ผึ้ง' },
+            { icon: '🦋', word: 'FLY', meaning: 'แมลงวัน' },
+            { icon: '🐸', word: 'FROG', meaning: 'กบ' },
+            { icon: '💧', word: 'DROP', meaning: 'หยดน้ำ' },
+            { icon: '🐭', word: 'MICE', meaning: 'หนู' },
         ];
 
         const LEVEL_2_WORDS = [
@@ -548,7 +548,7 @@
             { icon: '🧼', word: 'SOAP', meaning: 'สบู่' },
             { icon: '🗄️', word: 'DESK', meaning: 'โต๊ะทำงาน' },
         ];
-        
+
         // L3 & L4: 4-5 letters
         const LEVEL_3_WORDS = [
             { icon: '🍎', word: 'APPLE', meaning: 'แอปเปิล' },
@@ -660,14 +660,17 @@
             LEVEL_1_WORDS, LEVEL_2_WORDS, LEVEL_3_WORDS, LEVEL_4_WORDS, LEVEL_5_WORDS,
             LEVEL_6_WORDS, LEVEL_7_WORDS, LEVEL_8_WORDS, LEVEL_9_WORDS, LEVEL_10_WORDS
         ];
-        
+
         // NEW: Drop Interval in Milliseconds for each level (Requirement)
         const LEVEL_MS_INTERVALS = [
             350, 340, 330, 320, 310,
             300, 290, 280, 270, 260
         ];
         // Factor to convert MS to frames (1000ms / 60 FPS)
-        const MS_TO_FRAME_FACTOR = 1000 / 60; 
+        const MS_TO_FRAME_FACTOR = 1000 / 60;
+        
+        // **NEW CONSTANT V2.3:** จำนวนไอคอนสูงสุดที่อนุญาตให้มีในหน้าจอพร้อมกัน
+        const MAX_FALLING_ICONS = 3; 
 
         let DANGER_ZONE_Y;
         let usedWordsInLevel = new Set();
@@ -678,7 +681,7 @@
         let fallingIcons = [];
         let timeSinceLastDrop = 0;
 
-        const TOTAL_WORDS_TO_COLLECT = 10; 
+        const TOTAL_WORDS_TO_COLLECT = 10;
 
         let dropInterval;
         let isGameRunning = false;
@@ -701,7 +704,7 @@
                 else if (i < 4) range = '4-5';
                 else if (i < 8) range = '5-6';
                 else range = '6-8';
-                
+
                 button.textContent = `L${i + 1} (${range})`;
                 button.onclick = () => startGame(i);
                 levelButtonsContainer.appendChild(button);
@@ -712,12 +715,12 @@
             currentLevel = levelIndex;
             levelWords = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5);
             usedWordsInLevel.clear();
-            
+
             // NEW: Calculate dropInterval based on MS targets (Requirement)
             const targetMS = LEVEL_MS_INTERVALS[levelIndex];
             dropInterval = Math.round(targetMS / MS_TO_FRAME_FACTOR);
             // Ensure minimum interval is 1 frame
-            if (dropInterval < 1) dropInterval = 1; 
+            if (dropInterval < 1) dropInterval = 1;
 
             score = 0;
             startTime = Date.now();
@@ -738,27 +741,30 @@
 
             await showCountdown();
 
-            // Start dropping immediately after countdown (Requirement 2)
-            timeSinceLastDrop = dropInterval; 
+            // การแก้ไข v2.3: ปรับให้มีการหน่วงเวลาเริ่มต้นแบบสุ่ม 
+            // เพื่อกระจายการดรอปไอคอนคำแรก ๆ (0-50% ของรอบดรอปปกติ)
+            timeSinceLastDrop = Math.floor(Math.random() * dropInterval * 0.5);
 
             isGameRunning = true;
             if (!gameLoopId) {
                 gameLoop();
             }
         }
-        
+
         function showLevelCompleteScreen() {
             isGameRunning = false;
+            fallingIcons.length = 0;
+
             canvas.style.display = 'none';
             topBar.style.display = 'none';
             inputBox.style.display = 'none';
             virtualKeyboard.style.display = 'none';
 
             levelCompleteScreen.style.display = 'flex';
-            
+
             completeMessage.textContent = `Level ${currentLevel + 1} Complete! 🎉`;
             finalScoreDisplay.textContent = `Final Score: ${score}`;
-            
+
             if (currentLevel < ALL_LEVEL_WORDS.length - 1) {
                 nextLevelBtn.style.display = 'block';
                 nextLevelBtn.onclick = () => {
@@ -769,7 +775,7 @@
                     }
                 };
             } else {
-                nextLevelBtn.style.display = 'none'; 
+                nextLevelBtn.style.display = 'none';
                 completeMessage.textContent = `All Levels Complete! 🏆`;
             }
             returnToMenuBtnComplete.onclick = returnToMenu;
@@ -806,7 +812,7 @@
             topBar.style.display = 'none';
             inputBox.style.display = 'none';
             virtualKeyboard.style.display = 'none';
-            levelCompleteScreen.style.display = 'none'; 
+            levelCompleteScreen.style.display = 'none';
             menuScreen.style.display = 'flex';
         }
 
@@ -822,19 +828,17 @@
             let availableWords = levelWords.filter(w => !usedWordsInLevel.has(w.word));
 
             if (availableWords.length === 0) {
-                // If all 10 unique words are currently in use (either collected or falling),
-                // we recycle from the main list but only words that haven't been collected yet.
-                // Note: The logic handles collected words (wordsCollected < 10)
-                usedWordsInLevel.clear(); 
+                // If all 10 unique words are currently in use 
+                usedWordsInLevel.clear();
                 availableWords = levelWords;
             }
 
             const wordData = availableWords[Math.floor(Math.random() * availableWords.length)];
             usedWordsInLevel.add(wordData.word);
 
-            // NEW: Adjust Falling Speed (0.8 for L1 up to 2.0 for L10)
-            const baseSpeed = 0.8 + (currentLevel * 0.133); 
-            
+            // Adjust Falling Speed (0.8 for L1 up to 2.0 for L10)
+            const baseSpeed = 0.8 + (currentLevel * 0.133);
+
             return {
                 x: Math.random() * (canvas.width - 60) + 30,
                 y: -50,
@@ -852,7 +856,7 @@
         // --- Game Loop Logic ---
         function update() {
             if (!isGameRunning) return;
-            
+
             if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
                 // Double check for completion, in case it was missed in handleInput
                 showLevelCompleteScreen();
@@ -861,10 +865,17 @@
 
             runningTime = Date.now() - startTime;
             timeDisplay.textContent = formatTime(runningTime);
+            
+            // **การแก้ไข v2.3:** ตรวจสอบจำนวนไอคอนที่ยังไม่ถูกทำลาย
+            const activeFallingIcons = fallingIcons.filter(icon => !icon.isDestroying).length;
 
             timeSinceLastDrop++;
-            // Only drop new icons if we haven't collected all 10 yet
-            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
+            
+            // เงื่อนไขการดรอปใหม่:
+            // 1. ต้องถึงรอบเวลาดรอป (timeSinceLastDrop >= dropInterval)
+            // 2. ต้องมีคำศัพท์ที่ต้องการเก็บยังไม่ครบ (wordsCollected < TOTAL_WORDS_TO_COLLECT)
+            // 3. **ต้องมีไอคอนที่ยังไม่ถูกพิมพ์ในจอไม่เกิน MAX_FALLING_ICONS**
+            if (timeSinceLastDrop >= dropInterval && wordsCollected < TOTAL_WORDS_TO_COLLECT && activeFallingIcons < MAX_FALLING_ICONS) {
                 if (levelWords.length > 0) {
                     fallingIcons.push(createWordIcon());
                 }
@@ -887,17 +898,17 @@
 
                     icon.y += icon.speed;
 
-                    // Score Deduction instead of Game Over (Requirement 3)
+                    // Score Deduction 
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
                         // Deduct score
-                        score -= 15; 
-                        if (score < 0) score = 0; 
+                        score -= 15;
+                        if (score < 0) score = 0;
                         scoreDisplay.textContent = score;
-                        
+
                         // Remove fallen icon. The word must be collected successfully later.
                         fallingIcons.splice(i, 1);
                         // The word is removed from the screen, but NOT counted as collected, so it can drop again later.
-                        continue; 
+                        continue;
                     }
                 }
             }
@@ -938,7 +949,7 @@
                     ctx.fillText(icon.remainingLetters, icon.x, icon.y + icon.iconSize / 2 + 15);
                 }
             });
-            
+
             // Draw collected word count
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#1a237e';
@@ -1003,10 +1014,10 @@
                         icon.isDestroying = true;
 
                         speakWord(icon.targetWord);
-                        
+
                         wordsCollected++;
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            setTimeout(showLevelCompleteScreen, 500); 
+                            setTimeout(showLevelCompleteScreen, 500);
                         }
                     }
 
@@ -1047,7 +1058,7 @@
         createVirtualKeyboard();
         generateLevels();
         resizeCanvas();
-        gameLoop(); 
+        gameLoop();
     </script>
 </body>
 
