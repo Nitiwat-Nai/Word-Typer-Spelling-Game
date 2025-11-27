@@ -56,7 +56,8 @@
             }
         }
 
-        #gameTitle {
+        /* Shared style for Game Title and Menu Title to handle animations */
+        #gameTitle, #menuTitle {
             font-size: clamp(24px, 6vw, 36px);
             font-weight: 800;
             color: #ffffff;
@@ -71,36 +72,28 @@
             animation: gradientShift 3s ease infinite;
             z-index: 10;
             cursor: pointer;
+            user-select: none;
+        }
+
+        /* Specific override for Menu Title positioning */
+        #menuTitle {
+            font-size: clamp(28px, 7vw, 42px);
+            margin-bottom: 30px;
         }
 
         @keyframes gradientShift {
-
-            0%,
-            100% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
 
-        /* UPDATED: Auto Play Beat Animation - Slower */
+        /* Auto Play Beat Animation */
         .auto-play-active {
             animation: gradientShift 3s ease infinite, beat 0.8s infinite alternate !important;
-            /* Slower beat 0.8s */
         }
 
         @keyframes beat {
-            from {
-                transform: scale(1.0);
-                opacity: 0.9;
-            }
-
-            to {
-                transform: scale(1.03);
-                opacity: 1;
-            }
+            from { transform: scale(1.0); opacity: 0.9; }
+            to { transform: scale(1.05); opacity: 1; }
         }
 
         #topBar {
@@ -113,45 +106,22 @@
             z-index: 10;
         }
 
-        .score-box,
-        .time-box,
-        .control-btn {
+        .score-box, .time-box, .control-btn {
             padding: 10px 15px;
             border-radius: 15px;
             font-weight: 700;
             font-size: clamp(12px, 3.5vw, 16px);
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transition: all 0.3s;
             border: none;
             white-space: nowrap;
         }
 
-        .score-box {
-            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-            color: white;
-            flex: 1;
-            text-align: center;
-        }
-
-        .time-box {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            flex: 1;
-            text-align: center;
-        }
-
-        .control-btn {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: #333;
-            font-weight: 800;
-            flex: 1.2;
-        }
-
-        .control-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
+        .score-box { background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; flex: 1; text-align: center; }
+        .time-box { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; flex: 1; text-align: center; }
+        .control-btn { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333; font-weight: 800; flex: 1.2; }
+        .control-btn:active { transform: scale(0.95); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 
         #gameCanvas {
             flex: 1;
@@ -182,36 +152,15 @@
         }
 
         @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
-        .typed-error {
-            color: #ff4757;
-            animation: shake 0.3s;
-        }
-
+        .typed-error { color: #ff4757; animation: shake 0.3s; }
         @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            25% {
-                transform: translateX(-10px);
-            }
-
-            75% {
-                transform: translateX(10px);
-            }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
         }
 
         #virtualKeyboard {
@@ -225,11 +174,7 @@
             z-index: 10;
         }
 
-        .keyboard-row {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-        }
+        .keyboard-row { display: flex; justify-content: center; gap: 5px; }
 
         .key-button {
             background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
@@ -246,258 +191,111 @@
             min-width: 35px;
             flex: 1;
             max-width: 55px;
-            /* Added for multiline text */
-            white-space: normal;
-            line-height: 1.2;
-            text-align: center;
         }
 
-        .key-button:active,
-        .key-active {
+        .key-button:active, .key-active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: white !important;
             transform: scale(1.1) !important;
-            /* Zoom effect */
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
 
-        /* Menu Screens Style */
-        #menuScreen,
-        #levelCompleteScreen {
+        #menuScreen, #levelCompleteScreen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            padding: 20px;
-            text-align: center;
-            overflow-y: auto;
-        }
-
-        #menuTitle {
-            font-size: clamp(28px, 7vw, 42px);
-            font-weight: 900;
-            color: #ffffff;
-            margin-bottom: 30px;
-            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
-            background-size: 300% 100%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradientShift 3s ease infinite;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; padding: 20px; text-align: center; overflow-y: auto;
         }
 
         #menuScreen h2 {
-            color: white;
-            font-size: clamp(20px, 5vw, 28px);
-            margin-bottom: 20px;
-            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            font-weight: 800;
+            color: white; font-size: clamp(20px, 5vw, 28px); margin-bottom: 20px;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); font-weight: 800;
         }
 
         #levelCompleteScreen #completeMessage {
-            font-size: clamp(28px, 7vw, 42px);
-            font-weight: 900;
-            color: #feca57;
-            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            margin-bottom: 10px;
+            font-size: clamp(28px, 7vw, 42px); font-weight: 900; color: #feca57;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); margin-bottom: 10px;
         }
 
         #levelCompleteScreen #finalScore {
-            font-size: clamp(20px, 5vw, 32px);
-            font-weight: 800;
-            color: #ffffff;
-            margin-bottom: 20px;
+            font-size: clamp(20px, 5vw, 32px); font-weight: 800; color: #ffffff; margin-bottom: 20px;
         }
 
         .menu-btn {
-            width: 80%;
-            max-width: 300px;
-            padding: 15px 10px;
-            font-size: clamp(16px, 4vw, 20px);
-            font-weight: 800;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            margin-bottom: 15px;
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            width: 80%; max-width: 300px; padding: 15px 10px;
+            font-size: clamp(16px, 4vw, 20px); font-weight: 800; color: white;
+            border: none; border-radius: 15px; cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s;
+            margin-bottom: 15px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         }
 
-        #nextLevelBtn {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .menu-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-        }
+        #nextLevelBtn { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .menu-btn:active { transform: scale(0.95); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3); }
 
         #countdownOverlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); display: none;
+            align-items: center; justify-content: center; z-index: 200;
         }
 
         #countdownNumber {
-            font-size: clamp(80px, 20vw, 150px);
-            font-weight: 900;
-            color: #ffffff;
+            font-size: clamp(80px, 20vw, 150px); font-weight: 900; color: #ffffff;
             text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
             animation: countdownPulse 1s ease-in-out;
         }
 
         @keyframes countdownPulse {
-            0% {
-                transform: scale(0.5);
-                opacity: 0;
-            }
-
-            50% {
-                transform: scale(1.2);
-                opacity: 1;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         #levelButtonsContainer {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            padding: 10px;
-            max-width: 600px;
-            width: 100%;
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 10px; padding: 10px; max-width: 600px; width: 100%;
         }
 
         .level-button {
-            padding: 15px 10px;
-            font-size: clamp(12px, 3vw, 16px);
-            font-weight: 800;
+            padding: 15px 10px; font-size: clamp(12px, 3vw, 16px); font-weight: 800;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            border-radius: 15px;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            position: relative;
-            overflow: hidden;
-            /* Added for multiline text */
-            white-space: normal;
-            line-height: 1.2;
-            text-align: center;
+            color: white; border: none; border-radius: 15px; cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s;
+            position: relative; overflow: hidden; white-space: normal;
+            line-height: 1.2; text-align: center;
         }
 
         .level-button::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 0; height: 0; border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+            transform: translate(-50%, -50%); transition: width 0.6s, height 0.6s;
         }
 
-        .level-button:active::before {
-            width: 300px;
-            height: 300px;
-        }
+        .level-button:active::before { width: 300px; height: 300px; }
+        .level-button:active { transform: scale(0.95); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3); }
 
-        .level-button:active {
-            transform: scale(0.95);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Word Summary Table */
         #wordSummaryTable {
-            width: 90%;
-            max-width: 450px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            border-collapse: collapse;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            width: 90%; max-width: 450px; margin-top: 20px; margin-bottom: 20px;
+            border-collapse: collapse; background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
-        #wordSummaryTable th,
-        #wordSummaryTable td {
-            padding: 10px;
-            border: 1px solid #ddd;
-        }
-
-        #wordSummaryTable th {
-            background: #3a7bd5;
-            color: white;
-            font-size: clamp(14px, 3.5vw, 18px);
-        }
-
-        #wordSummaryTable td {
-            font-size: clamp(12px, 3vw, 16px);
-            color: #333;
-        }
-
-        #wordSummaryTable tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
+        #wordSummaryTable th, #wordSummaryTable td { padding: 10px; border: 1px solid #ddd; }
+        #wordSummaryTable th { background: #3a7bd5; color: white; font-size: clamp(14px, 3.5vw, 18px); }
+        #wordSummaryTable td { font-size: clamp(12px, 3vw, 16px); color: #333; }
+        #wordSummaryTable tr:nth-child(even) { background-color: #f2f2f2; }
 
         @media (max-width: 400px) {
-            #levelButtonsContainer {
-                grid-template-columns: repeat(5, 1fr);
-                gap: 8px;
-            }
-
-            .level-button {
-                padding: 12px 8px;
-            }
+            #levelButtonsContainer { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+            .level-button { padding: 12px 8px; }
         }
-
         @media (orientation: landscape) and (max-height: 500px) {
-            #gameTitle {
-                padding: 8px 10px;
-            }
-
-            #topBar {
-                padding: 5px 15px;
-            }
-
-            #inputBox {
-                padding: 8px;
-            }
-
-            #virtualKeyboard {
-                padding: 5px;
-                gap: 4px;
-            }
-
-            .key-button {
-                padding: 8px 0;
-            }
+            #gameTitle, #menuTitle { padding: 8px 10px; }
+            #topBar { padding: 5px 15px; }
+            #inputBox { padding: 8px; }
+            #virtualKeyboard { padding: 5px; gap: 4px; }
+            .key-button { padding: 8px 0; }
         }
     </style>
 </head>
@@ -557,6 +355,7 @@
         const countdownNumber = document.getElementById('countdownNumber');
 
         const gameTitle = document.getElementById('gameTitle');
+        const menuTitle = document.getElementById('menuTitle'); // New reference
         const levelCompleteScreen = document.getElementById('levelCompleteScreen');
         const completeMessage = document.getElementById('completeMessage');
         const finalScoreDisplay = document.getElementById('finalScore');
@@ -577,58 +376,31 @@
         // --- Speech Synthesis Logic ---
         const synth = window.speechSynthesis;
         let speechQueue = [];
-        
 
-        // Function to handle sequential speaking
         function speakWord(word) {
-            if (!synth) return null;
+            if (!synth) return;
             
-            // Clear any currently speaking or pending speech to ensure this word is spoken immediately
-            synth.cancel();
+            synth.cancel(); // Cancel previous speech to prioritize current
             speechQueue.length = 0; 
             
             const utterance = new SpeechSynthesisUtterance(word);
-            
-            // Setup voice/rate (optional but good practice)
             const voices = synth.getVoices();
             const enVoice = voices.find(voice => voice.lang.startsWith('en-'));
-            if (enVoice) {
-                utterance.voice = enVoice;
-            }
+            if (enVoice) utterance.voice = enVoice;
             utterance.pitch = 1.0; 
             utterance.rate = 0.8; 
 
-            speechQueue.push(utterance);
-            
-            // CRITICAL: Single comprehensive onend handler
-            // This is kept simple, only managing the queue for subsequent words (if any were added before this one finished).
-            utterance.onend = () => {
-                speechQueue.shift(); 
-                if (speechQueue.length > 0) {
-                    synth.speak(speechQueue[0]); 
-                }
-            };
-            
-            // Start speaking 
-            if (speechQueue.length === 1 && !synth.speaking) {
-                synth.speak(utterance);
-            }
-            return utterance; 
+            synth.speak(utterance);
         }
 
         // --- Sound Logic ---
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let audioNode = audioContext.destination; // Define audioNode for connection
+        let audioNode = audioContext.destination; 
 
         function playSound(frequency, duration, type, gain = 0.5) {
             if (!audioContext) return;
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    _play(frequency, duration, type, gain);
-                });
-            } else {
-                _play(frequency, duration, type, gain);
-            }
+            // No resume() check here, we do it in startGame to ensure context is ready
+            _play(frequency, duration, type, gain);
         }
         
         function _play(frequency, duration, type, gain) {
@@ -638,7 +410,6 @@
             oscillator.type = type;
             oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
             gainNode.gain.setValueAtTime(gain, audioContext.currentTime);
-
             gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
 
             oscillator.connect(gainNode);
@@ -664,11 +435,9 @@
         }
 
         window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(resizeCanvas, 100);
-        });
+        window.addEventListener('orientationchange', () => { setTimeout(resizeCanvas, 100); });
 
-        // --- Word Data (Same as previous) ---
+        // --- Word Data ---
         const LEVEL_1_WORDS = [
             { icon: '🖋️', word: 'PEN', meaning: 'ปากกา' },
             { icon: '🐱', word: 'CAT', meaning: 'แมว' },
@@ -821,39 +590,42 @@
             isAutoPlayMode = !isAutoPlayMode;
             if (isAutoPlayMode) {
                 gameTitle.classList.add('auto-play-active');
+                menuTitle.classList.add('auto-play-active');
                 console.log("Auto Play Mode: ON");
             } else {
                 gameTitle.classList.remove('auto-play-active');
+                menuTitle.classList.remove('auto-play-active');
                 console.log("Auto Play Mode: OFF");
             }
         }
 
-        // Double click/tap event to toggle bot mode ONLY from main screen
+        // Add listeners to BOTH titles
         gameTitle.addEventListener('dblclick', toggleAutoPlay);
+        menuTitle.addEventListener('dblclick', toggleAutoPlay);
         
+        // Touch handling for both
         let lastTap = 0;
-        gameTitle.addEventListener('touchend', function(event) {
+        function handleTouchToggle(event) {
             const currentTime = new Date().getTime();
             const tapLength = currentTime - lastTap;
-            // Check if it's a double tap (within 500ms)
             if (tapLength < 500 && tapLength > 50) { 
                 toggleAutoPlay();
                 event.preventDefault(); 
             }
             lastTap = currentTime;
-        });
+        }
+        gameTitle.addEventListener('touchend', handleTouchToggle);
+        menuTitle.addEventListener('touchend', handleTouchToggle);
+
 
         // NEW: Function to find the active target for the bot
         function findBotTarget() {
-            // Find the first icon that is NOT in the process of being destroyed
             return fallingIcons.find(icon => !icon.isDestroying); 
         }
 
         function startAutoPlay() {
             stopAutoPlay();
             if (!isAutoPlayMode || !isGameRunning) return;
-
-            // Start by waiting for the first non-destroying icon to appear
             isWaitingForNextIcon = true; 
         }
 
@@ -863,41 +635,28 @@
             autoPlayTimerId = null;
             botTypingIntervalId = null;
             botCurrentCharIndex = 0;
-            botCurrentTarget = null; // Clear the target
-            // isWaitingForNextIcon is often set to true when stop is called to prepare for the next word
+            botCurrentTarget = null; 
         }
 
-        /**
-         * Core function to handle the delayed typing for the current word.
-         */
         function processNextWordForBot() {
             const targetIcon = findBotTarget();
 
-            // Guard: If no valid target is found, or mode is off, reset state and wait.
             if (!isAutoPlayMode || !isGameRunning || !targetIcon) {
                 stopAutoPlay();
-                isWaitingForNextIcon = true; // Ensure it keeps trying 
+                isWaitingForNextIcon = true; 
                 return; 
             }
             
-            // Guard: Prevent re-triggering if a process is already underway
             if (autoPlayTimerId !== null || botTypingIntervalId !== null) return;
 
-            // Set the target and start the process
             botCurrentTarget = targetIcon;
             isWaitingForNextIcon = false; 
 
             const targetWord = botCurrentTarget.targetWord;
             botCurrentCharIndex = 0;
             
-            console.log(`Bot is targeting: ${targetWord}`);
-
-            // Delay 1 second before starting to type the first character (Requirement 1)
             autoPlayTimerId = setTimeout(() => {
-                
-                // Start typing characters with 0.5s interval (Requirement 1)
                 botTypingIntervalId = setInterval(() => {
-                    // Robust check: If game ends, or target is destroyed (by external force), exit.
                     if (!isGameRunning || botCurrentTarget.isDestroying) { 
                         stopAutoPlay();
                         isWaitingForNextIcon = true; 
@@ -909,15 +668,13 @@
                         handleInput(char); 
                         botCurrentCharIndex++;
                     } else {
-                        // This block should ideally not be hit if handleInput works, but as safety:
                         clearInterval(botTypingIntervalId);
                         botTypingIntervalId = null;
                         isWaitingForNextIcon = true; 
-                        console.log("Bot finished word (safety exit), waiting for next icon.");
                     }
-                }, 500); // 0.5 second interval for characters
-                autoPlayTimerId = null; // Clear the timeout ID now that interval has started
-            }, 1000); // 1 second delay before starting to type
+                }, 500); 
+                autoPlayTimerId = null; 
+            }, 1000); 
         }
 
         // --- Game Flow Functions ---
@@ -935,7 +692,6 @@
                 else if (i < 8) range = '5-6';
                 else range = '6-8';
 
-                // Use innerHTML and <br> for multiline display
                 button.innerHTML = `L${i + 1} <br> (${range})`; 
                 button.onclick = () => startGame(i);
                 levelButtonsContainer.appendChild(button);
@@ -943,6 +699,11 @@
         }
 
         async function startGame(levelIndex) {
+            // FIX: Resume audio context on user interaction (level click)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
             currentLevel = levelIndex;
             currentLevelWordData = [...ALL_LEVEL_WORDS[levelIndex]].sort(() => Math.random() - 0.5); 
             levelWords = currentLevelWordData;
@@ -958,10 +719,8 @@
             currentInputDisplay.textContent = 'รอพิมพ์...';
             stopAutoPlay(); 
             
-            // Clear speech queue
             if (synth) synth.cancel();
             speechQueue.length = 0;
-
 
             menuScreen.style.display = 'none';
             levelCompleteScreen.style.display = 'none';
@@ -975,15 +734,12 @@
 
             await showCountdown();
 
-            // Delay 1 second after countdown before starting the game/drop logic
             setTimeout(() => {
                 timeSinceLastDrop = dropInterval; 
                 isGameRunning = true;
                 if (!gameLoopId) {
                     gameLoop();
                 }
-
-                // Start bot logic preparation (waits for first icon)
                 startAutoPlay();
             }, 1000); 
         }
@@ -1006,7 +762,6 @@
         }
 
         function showLevelCompleteScreen() {
-            // This function is now called directly or via a fixed timeout.
             isGameRunning = false;
             fallingIcons.length = 0;
             stopAutoPlay(); 
@@ -1105,9 +860,11 @@
             };
         }
 
-        // --- Game Loop Logic (V4.5 Fixed) ---
+        // --- Game Loop Logic ---
         function update() {
-            // 1. Game State Updates (Time, Score, Drops) - ONLY IF isGameRunning
+            // FIX: Removed "if (!isGameRunning) return;" from here to allow destruction animation loop
+            
+            // Only update game STATE if running
             if (isGameRunning) {
                 runningTime = Date.now() - startTime;
                 timeDisplay.textContent = formatTime(runningTime);
@@ -1120,33 +877,26 @@
                     }
                     timeSinceLastDrop = 0;
                 }
-
-                // Bot Trigger Logic - ONLY IF isGameRunning
-                if (isAutoPlayMode && isWaitingForNextIcon) {
-                    processNextWordForBot(); 
-                }
             }
-            
-            // 2. Icon Movement, Destruction, and Cleanup - ALWAYS RUNS
+
             for (let i = fallingIcons.length - 1; i >= 0; i--) {
                 const icon = fallingIcons[i];
 
                 if (icon.isDestroying) {
-                    // Destruction logic (MUST RUN for animation)
+                    // Logic for animation runs regardless of isGameRunning
                     icon.destroyScale += 0.1;
                     icon.iconSize += 2;
                     if (icon.destroyScale > 2) {
                         fallingIcons.splice(i, 1);
                     }
-                } else if (isGameRunning) { 
-                    // Movement and danger zone logic (ONLY IF isGameRunning, not destroying)
+                } else if (isGameRunning) { // Movement only if game is running
                     if (icon.remainingLetters.length < icon.targetWord.length / 2) {
                         icon.speed = icon.baseSpeed * 1.2;
                     }
 
                     icon.y += icon.speed;
 
-                    // Score Deduction (Game Over condition for this icon)
+                    // Score Deduction 
                     if (icon.y + icon.iconSize / 2 > DANGER_ZONE_Y) {
                         playSound(150, 0.15, 'sine', 0.8); 
 
@@ -1155,7 +905,6 @@
                         scoreDisplay.textContent = score;
 
                         fallingIcons.splice(i, 1);
-                        // If an icon is missed, the bot should try to target the new first icon
                         if (isAutoPlayMode && fallingIcons.length > 0) {
                             stopAutoPlay();
                             isWaitingForNextIcon = true;
@@ -1164,15 +913,18 @@
                     }
                 }
             }
+
+            // Trigger bot logic only if game is actually running
+            if (isGameRunning && isAutoPlayMode && isWaitingForNextIcon) {
+                 processNextWordForBot(); 
+            }
         }
 
         function draw() {
-            // Only draw if we are in game mode or cleaning up after a word is completed
             if (menuScreen.style.display === 'flex' && levelCompleteScreen.style.display === 'none') return;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Danger Zone
             ctx.strokeStyle = '#ff4757';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -1180,7 +932,7 @@
             ctx.lineTo(canvas.width, DANGER_ZONE_Y);
             ctx.stroke();
 
-            // Flashing effect for Danger Zone (only while running)
+            // Only flash danger zone if game is running
             if (isGameRunning && Math.floor(runningTime / 150) % 2 === 0) {
                 ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
                 ctx.fillRect(0, DANGER_ZONE_Y - 5, canvas.width, 10);
@@ -1205,7 +957,6 @@
                 }
             });
 
-            // Draw collected word count
             ctx.font = 'bold 20px Arial';
             ctx.fillStyle = '#1a237e';
             ctx.textAlign = 'left';
@@ -1259,7 +1010,7 @@
         }
 
         function handleInput(typedKey) {
-            // Prevent new input if game is not running (i.e. we are in the 2s transition period)
+            // Allow input if game is running OR if it's the very last word completion
             if (!isGameRunning && wordsCollected < TOTAL_WORDS_TO_COLLECT) {
                 return;
             }
@@ -1291,25 +1042,23 @@
 
                         score += 10 + Math.floor((DANGER_ZONE_Y - icon.y) / 10);
                         scoreDisplay.textContent = score;
-                        icon.isDestroying = true; // Start the destruction animation
+                        icon.isDestroying = true; 
 
-                        // Speak the word immediately
                         speakWord(icon.targetWord);
 
                         wordsCollected++;
                         
-                        // If word is completed and Auto Play is on, stop the typing process and wait for the next icon
                         if (isAutoPlayMode) { 
                             stopAutoPlay(); 
                             isWaitingForNextIcon = true; 
                         }
                         
                         if (wordsCollected >= TOTAL_WORDS_TO_COLLECT) {
-                            // Stop game logic immediately (but allow update/draw loops to continue running animation)
+                            // Stop new logic immediately
                             isGameRunning = false; 
                             stopAutoPlay(); 
                             
-                            // Delay 2 seconds to allow the final word's speech AND animation to finish
+                            // Use FIXED timeout of 2 seconds instead of relying on speech events
                             setTimeout(() => { 
                                 showLevelCompleteScreen();
                             }, 2000); 
@@ -1322,7 +1071,7 @@
                 }
             }
 
-            if (!foundMatch && isGameRunning) { // Only show error if game is running normally
+            if (!foundMatch && isGameRunning) {
                 playSound(150, 0.15, 'sine', 0.8); 
                 
                 currentInputDisplay.textContent = typedKey;
